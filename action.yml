@@ -85,7 +85,8 @@ runs:
       shell: bash
       run: |
         if [ "$RUNNER_OS" != "macOS" ]; then echo "::error::iOS needs a macOS runner"; exit 2; fi
-        brew install --quiet cameroncooke/axe/axe ffmpeg
+        brew install --quiet cameroncooke/axe/axe
+        command -v ffmpeg >/dev/null || brew install --quiet ffmpeg || echo '::warning::ffmpeg not installed; continuing'
 
     - name: Install Android client tools
       if: inputs.platform == 'android'
@@ -97,11 +98,20 @@ runs:
           echo '::error::Android SDK command-line tools are missing; set ANDROID_HOME'; exit 2
         fi
         echo "ANDROID_HOME=$sdk_root" >> "$GITHUB_ENV"
+        # Install only what is missing, with a time limit: a broken package mirror must not hang the job.
+        # ffmpeg is optional (without it the video stays in its raw format); lsof is required.
         if [ "$RUNNER_OS" = "Linux" ]; then
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq ffmpeg lsof >/dev/null
+          missing=""
+          command -v ffmpeg >/dev/null || missing="$missing ffmpeg"
+          command -v lsof >/dev/null || missing="$missing lsof"
+          if [ -n "$missing" ]; then
+            timeout 300 sudo apt-get update -qq -o Acquire::Retries=2 || true
+            timeout 300 sudo apt-get install -y -qq -o Acquire::Retries=2 $missing >/dev/null 2>&1 \
+              || echo "::warning::could not install$missing; continuing"
+          fi
+          command -v lsof >/dev/null || { echo '::error::lsof is required and could not be installed'; exit 2; }
         elif [ "$RUNNER_OS" = "macOS" ]; then
-          brew install --quiet ffmpeg
+          command -v ffmpeg >/dev/null || brew install --quiet ffmpeg || echo '::warning::ffmpeg not installed; continuing'
         else
           echo '::error::Android needs a Linux or macOS runner'; exit 2
         fi

@@ -213,6 +213,10 @@ class AndroidReviewTests(unittest.TestCase):
         listener.close()
         time.sleep(0.2)
         client.close()
+        # Linux holds the port in FIN_WAIT/LAST_ACK for a moment before TIME_WAIT; port_released() waits the same way.
+        deadline = time.monotonic() + 5
+        while not android.free(port) and time.monotonic() < deadline:
+            time.sleep(0.1)
         self.assertTrue(android.free(port))
 
     def test_private_adb_command_accepts_sdk_paths_with_spaces(self):
