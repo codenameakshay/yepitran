@@ -404,21 +404,30 @@ class Android:
                                      + (f" (last error: {last})" if last else ""))
                 sleep(every)
 
+    # Run one at a time with a short limit: on a slow software-rendered emulator (Linux CI) one of
+    # these can hang for minutes. A stuck one is skipped and named; it must not fail the attempt.
+    SETUP = ("settings put global heads_up_notifications_enabled 0",
+             "settings put secure immersive_mode_confirmations confirmed",
+             "settings put system screen_off_timeout 2147483647",
+             "settings put global verifier_verify_adb_installs 0",
+             "settings put global package_verifier_user_consent -1",
+             "settings delete secure enabled_accessibility_services",
+             "settings put secure show_ime_with_hard_keyboard 0",
+             "svc power stayon true",
+             "cmd bluetooth_manager disable",
+             "input keyevent KEYCODE_WAKEUP",
+             "wm dismiss-keyguard",
+             "am broadcast -a android.intent.action.CLOSE_SYSTEM_DIALOGS")
+
     def configure(self) -> None:
-        self.shell("; ".join([
-            "settings put global heads_up_notifications_enabled 0",
-            "settings put secure immersive_mode_confirmations confirmed",
-            "settings put system screen_off_timeout 2147483647",
-            "settings put global verifier_verify_adb_installs 0",
-            "settings put global package_verifier_user_consent -1",
-            "settings delete secure enabled_accessibility_services",
-            "settings put secure show_ime_with_hard_keyboard 0",
-            "svc power stayon true",
-            "cmd bluetooth_manager disable",
-            "input keyevent KEYCODE_WAKEUP",
-            "wm dismiss-keyguard",
-            "am broadcast -a android.intent.action.CLOSE_SYSTEM_DIALOGS",
-        ]), check=False, timeout=90)
+        skipped = []
+        for command in self.SETUP:
+            try:
+                self.adb_raw("shell", command, timeout=30)
+            except InfraError:
+                skipped.append(command)
+        if skipped:
+            self.log(f"device setup: no answer from {'; '.join(skipped)}; continuing without it")
 
     def install(self, apk: Path, permissions: str) -> None:
         self.adb("uninstall", self.app["id"], check=False, timeout=120)

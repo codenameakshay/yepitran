@@ -156,3 +156,19 @@ class HostConfigTests(unittest.TestCase):
             self.assertEqual(build_app.call_args.args[1], "android")
             self.assertEqual(make_runner.call_count, 1)
             self.assertEqual(make_runner.call_args.args[0], "android")
+
+
+class ConfigureTests(unittest.TestCase):
+    def test_a_hanging_setup_command_is_skipped_and_the_rest_still_run(self):
+        logs, sent = [], []
+
+        def adb_raw(*args, **kwargs):
+            sent.append(args[1])
+            if args[1].startswith("cmd bluetooth_manager"):
+                raise android.InfraError("adb shell: no answer after 30s")
+
+        d = android.Android(logs.append, Path("/tmp"))
+        with patch.object(d, "adb_raw", side_effect=adb_raw):
+            d.configure()
+        self.assertEqual(list(android.Android.SETUP), sent)
+        self.assertTrue(any("cmd bluetooth_manager disable" in line for line in logs))
