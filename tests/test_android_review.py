@@ -303,6 +303,7 @@ class AndroidReviewTests(unittest.TestCase):
         scenario = type("Scenario", (), {"app": "", "reverse": [], "permissions": "deny"})()
         done = subprocess.CompletedProcess([], 0, "", "")
         with patch.object(android, "SNAPSHOTS", False), \
+             patch.object(android, "AVD_DIR", d.workdir / "avd"), \
              patch.object(android, "apk_info", return_value={"id": "app.test", "activity": "Main"}), \
              patch.object(d, "ensure_avd"), patch.object(d, "kill_emulator"), \
              patch.object(d, "start_adb_server"), patch.object(android, "pick_ports", return_value=(5700, 5701)), \
@@ -349,10 +350,11 @@ class AndroidReviewTests(unittest.TestCase):
                     args, existed_at_boot, avd_home = boots[0]
                     self.assertEqual("-snapshot" in args, enabled and level == 1)
                     self.assertEqual("-wipe-data" in args, not enabled or level != 1)
-                    self.assertEqual(existed_at_boot, level != 3)
+                    self.assertEqual(existed_at_boot, enabled and level != 3)
                     self.assertEqual(avd_home, str(Path(tmp)))
                     self.assertEqual(saved, [f"avd snapshot save {android.SNAPSHOT}"] if enabled and level != 1 else [])
                     expected = "fresh clean state" if enabled and level != 1 else "old clean state"
+                    self.assertEqual(snap.exists(), enabled)
                     if snap.exists():
                         self.assertEqual((snap / "state").read_text(), expected)
 

@@ -346,7 +346,8 @@ class Android:
         self.kill_emulator()
         self.start_adb_server()
         snap = AVD_DIR / "snapshots" / SNAPSHOT
-        if level >= 3 and snap.exists():
+        # Do not leave an older software-rendered snapshot for a later host-GPU run.
+        if (level >= 3 or not SNAPSHOTS) and snap.exists():
             shutil.rmtree(snap, ignore_errors=True)
         c, a = pick_ports()
         self.console_port, self.serial = c, f"emulator-{c}"
