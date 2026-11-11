@@ -34,6 +34,9 @@ HOST_ABI = "arm64-v8a" if platform.machine().lower() in ("arm64", "aarch64") els
 IMAGE_DIR = SDK / "system-images/android-36/google_apis" / HOST_ABI
 # Swiftshader ANRs under load on macOS; a headless Linux CI box has no GPU to use.
 GPU = os.environ.get("YEPITRAN_EMULATOR_GPU") or ("host" if sys.platform == "darwin" else "swiftshader_indirect")
+# A snapshot saved under software rendering left Android's system services crashing on Linux CI
+# (black screen, "Failure calling service package"). Fast snapshot boots only with a host GPU.
+SNAPSHOTS = GPU == "host"
 ADB = str(SDK / "platform-tools/adb")
 EMULATOR = str(SDK / "emulator/emulator")
 AVD = "yepitran_API36"
@@ -43,7 +46,7 @@ AVD_DIR = Path(os.environ.get("ANDROID_AVD_HOME") or
 ADB_PORT = "5137"
 SNAPSHOT = "yepitran_clean_v2"
 SEGMENT = 170  # console screenrecord stops itself at 180 s; rotate before that
-AVD_CONFIG = {"hw.keyboard": "yes", "hw.gpu.enabled": "yes", "hw.gpu.mode": GPU, "hw.ramSize": "3072",
+AVD_CONFIG = {"hw.keyboard": "yes", "hw.gpu.enabled": "yes", "hw.gpu.mode": GPU, "hw.ramSize": "3072", "hw.cpu.ncore": str(min(4, os.cpu_count() or 2)),
               "disk.dataPartition.size": "6G", "fastboot.forceColdBoot": "no"}
 TRANSPORT = ("device offline", "not found", "no devices", "cannot connect to daemon", "daemon not running",
              "closed", "protocol fault", "Connection reset", "device still connecting", "Broken pipe")
@@ -349,7 +352,7 @@ class Android:
         self.console_port, self.serial = c, f"emulator-{c}"
         cmd = [EMULATOR, "-avd", AVD, "-ports", f"{c},{a}", "-no-window", "-no-audio", "-no-boot-anim",
                "-gpu", GPU, "-no-snapshot-save"]
-        use_snap = snap.exists() and level == 1
+        use_snap = SNAPSHOTS and snap.exists() and level == 1
         cmd += ["-snapshot", SNAPSHOT] if use_snap else ["-no-snapshot-load"]
         if level >= 3 or not use_snap:
             cmd.append("-wipe-data")
@@ -361,7 +364,7 @@ class Android:
         self.log(f"emulator {self.serial} booted {how} in {time.monotonic() - t:.0f}s")
         self.configure()
         self.adb("uninstall", self.app["id"], check=False, timeout=120)
-        if not use_snap:
+        if SNAPSHOTS and not use_snap:
             console(c, f"avd snapshot save {SNAPSHOT}", timeout=180)
             self.log("saved a clean snapshot for fast boots")
         self.install(artifact, scenario.permissions)
@@ -413,6 +416,9 @@ class Android:
              "settings put global package_verifier_user_consent -1",
              "settings delete secure enabled_accessibility_services",
              "settings put secure show_ime_with_hard_keyboard 0",
+             "settings put global window_animation_scale 0",
+             "settings put global transition_animation_scale 0",
+             "settings put global animator_duration_scale 0",
              "svc power stayon true",
              "cmd bluetooth_manager disable",
              "input keyevent KEYCODE_WAKEUP",

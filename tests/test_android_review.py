@@ -272,6 +272,25 @@ class AndroidReviewTests(unittest.TestCase):
                 "emulator.log", "logcat.txt", "segments.txt", "video.mp4", "video.webm", "video-00.webm")))
             self.assertEqual("keep", untouched.read_text())
 
+    def test_without_a_host_gpu_no_snapshot_is_saved_or_loaded(self):
+        d = self.driver()
+        consoles = []
+        scenario = type("Scenario", (), {"app": "", "reverse": [], "permissions": "deny"})()
+        done = subprocess.CompletedProcess([], 0, "", "")
+        with patch.object(android, "SNAPSHOTS", False), \
+             patch.object(android, "apk_info", return_value={"id": "app.test", "activity": "Main"}), \
+             patch.object(d, "ensure_avd"), patch.object(d, "kill_emulator"), \
+             patch.object(d, "start_adb_server"), patch.object(android, "pick_ports", return_value=(5700, 5701)), \
+             patch.object(android, "spawn", return_value=Mock()) as spawn, patch.object(d, "wait_booted"), \
+             patch.object(d, "configure"), patch.object(d, "adb", return_value=done), \
+             patch.object(android, "console", side_effect=lambda *a, **k: consoles.append(a) or ["yepitran_API36"]), \
+             patch.object(d, "install"), patch.object(d, "apply_reverse"), patch.object(d, "shell", return_value="9"):
+            d.prepare(Path("app.apk"), scenario, level=1)
+        self.assertFalse(any("snapshot save" in a[1] for a in consoles))
+        self.assertNotIn("-snapshot", spawn.call_args.args[0])
+        self.assertIn("-wipe-data", spawn.call_args.args[0])
+
+    @patch.object(android, "SNAPSHOTS", True)
     def test_cold_boot_wipes_userdata_before_saving_clean_snapshot(self):
         d = self.driver()
         events = []
