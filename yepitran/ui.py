@@ -112,16 +112,27 @@ def visible_summary(nodes: list[Node], screen: tuple[float, float], limit: int =
 
 
 def text_landed(typed: str, shown: str) -> bool:
-    """Fields may change case and add separators ("5551234" -> "(555) 123-4"), so the typed
-    characters must appear in order. What they may not do is add letters, or split a word
-    with a space: that is autocorrect ("yepitran" -> "proof run"), not formatting."""
+    """The field may add formatting: case, separators, and a digit prefix such as a country code
+    ("5551234" -> "+1 (555) 123-4"). It may not add or drop letters ("TTryTry yepitran" is a keyboard
+    stutter), or put a space inside a word ("yepitran" -> "yep it ran" is autocorrect)."""
     t, s = typed.lower(), shown.lower()
-    if t in s:
-        return True
-    i = 0
-    for j, c in enumerate(s):
-        if i < len(t) and c == t[i]:
-            i += 1
-        elif i and i < len(t) and (c.isalpha() or (c.isspace() and t[i - 1].isalpha() and t[i].isalpha())):
-            return False
-    return i == len(t)
+    ta = [c for c in t if c.isalnum()]
+    sa = [c for c in s if c.isalnum()]
+    extra = len(sa) - len(ta)
+    if extra < 0 or sa[extra:] != ta or not all(c.isdigit() for c in sa[:extra]):
+        return False
+
+    def word_breaks(text: str, shift: int = 0) -> set[int]:
+        """Indexes (into the alphanumerics) that a space comes right before."""
+        out, n, gap = set(), 0, False
+        for c in text:
+            if c.isalnum():
+                if gap and n:
+                    out.add(n + shift)
+                n, gap = n + 1, False
+            elif c.isspace():
+                gap = True
+        return out
+
+    return not any(sa[k - 1].isalpha() and sa[k].isalpha()
+                   for k in word_breaks(s) - word_breaks(t, extra))

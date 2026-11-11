@@ -486,7 +486,11 @@ class LegRunner:
                     break
                 sleep(0.5)
             if ui.text_landed(s.text, shown):
-                return
+                sleep(1.0)  # a slow keyboard can still rewrite the field after it looked right
+                field_ = self.field_at(self.read(), point)
+                shown = (field_.value or field_.label) if field_ else shown
+                if field_ is None or ui.text_landed(s.text, shown):
+                    return
             self.log(f'typed "{s.text}" but the field shows "{shown}"; clearing and retyping')
             self.d.tap(*point)
             self.d.clear_text()

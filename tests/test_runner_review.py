@@ -241,3 +241,24 @@ class RunnerReviewTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+    def test_text_rewritten_after_it_looked_right_is_retyped(self):
+        runner = self.runner('type "Try yepitran" into "Task title"\n')
+        typed = []
+        after_first = iter(["Try yepitran", "Try yean"])  # looked right, then a slow keyboard rewrote it
+
+        def tree():
+            if not typed:
+                value = ""
+            elif len(typed) == 1:
+                value = next(after_first, "Try yean")
+            else:
+                value = "Try yepitran"
+            return [Node("Example", "", "", "Application", 0, 0, 402, 874, path=(0,)),
+                    Node("Task title", "", value, "TextField", 0, 100, 402, 60, path=(0, 0))]
+
+        self.driver.tree = tree
+        self.driver.type_text = typed.append
+        with mock.patch("yepitran.runner.sleep", lambda s: None):
+            runner.type(runner.steps[0])
+        self.assertEqual(2, len(typed))

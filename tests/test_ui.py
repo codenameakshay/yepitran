@@ -94,6 +94,14 @@ class TextLandedTests(unittest.TestCase):
         self.assertFalse(text_landed("Cab", "Can"))
         self.assertTrue(text_landed("5551234", "(555) 123-4"))
 
+    def test_keyboard_stutter_and_word_splits_are_detected(self):
+        self.assertFalse(text_landed("Try yepitran", "TTryTry yepitran"))   # doubled input on a slow device
+        self.assertFalse(text_landed("Try yepitran", "Try yean"))           # dropped input
+        self.assertFalse(text_landed("yepitran", "yep it ran"))             # autocorrect split the word
+        self.assertFalse(text_landed("Try yepitran", "Try yepitranx"))      # extra trailing letter
+        self.assertTrue(text_landed("Try yepitran", "Try yepitran"))
+        self.assertTrue(text_landed("New York", "new york"))
+
 
 class ValidPngTests(unittest.TestCase):
     def test_complete_png_is_valid(self):
