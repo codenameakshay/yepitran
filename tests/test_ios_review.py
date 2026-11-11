@@ -14,6 +14,20 @@ from yepitran.ui import Node
 
 
 class IOSReviewTests(unittest.TestCase):
+    def test_clear_text_accepts_the_shared_readback_length(self):
+        text = ["old text"]
+        selected = [False]
+
+        def axe(*args):
+            if args == ("key-combo", "--modifiers", "227", "--key", "4"):
+                selected[0] = True
+            elif args == ("key", "42") and selected[0]:
+                text[0] = ""
+
+        with mock.patch.object(self.driver, "axe", side_effect=axe):
+            self.driver.clear_text(150)
+        self.assertEqual(text[0], "")
+
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)

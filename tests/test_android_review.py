@@ -3,6 +3,7 @@ from __future__ import annotations
 import subprocess
 import time
 import tempfile
+import shlex
 import unittest
 from pathlib import Path
 from unittest.mock import Mock, patch
@@ -11,6 +12,30 @@ from yepitran import android, proc
 
 
 class AndroidReviewTests(unittest.TestCase):
+    def test_clear_text_deletes_long_multiline_input_when_select_all_is_ignored(self):
+        d = self.driver()
+        text = ["first line\n" + "x" * 140]
+        cursor = [4]
+
+        def input_shell(command):
+            for part in command.split(";"):
+                args = shlex.split(part)
+                if args == ["input", "keycombination", "113", "123"]:
+                    cursor[0] = len(text[0])
+                elif args[:2] == ["input", "keyevent"]:
+                    for key in args[2:]:
+                        if key == "KEYCODE_MOVE_END":
+                            end = text[0].find("\n", cursor[0])
+                            cursor[0] = len(text[0]) if end < 0 else end
+                        elif key == "67" and cursor[0]:
+                            text[0] = text[0][:cursor[0] - 1] + text[0][cursor[0]:]
+                            cursor[0] -= 1
+            return ""
+
+        with patch.object(d, "shell", side_effect=input_shell):
+            d.clear_text(len(text[0]))
+        self.assertEqual(text[0], "")
+
     def setUp(self):
         self.home = tempfile.TemporaryDirectory()
         self.addCleanup(self.home.cleanup)

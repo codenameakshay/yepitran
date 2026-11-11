@@ -497,7 +497,7 @@ class LegRunner:
                     return
             self.log(f'typed "{s.text}" but the field shows "{shown}"; clearing and retyping')
             self.d.tap(*point)
-            self.d.clear_text()
+            self.d.clear_text(len(shown))
         raise InfraError(f'typed "{s.text}" 3 times but the field shows "{shown}" '
                          "(the keyboard dropped or rewrote input)")
 

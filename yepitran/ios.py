@@ -270,7 +270,7 @@ class IOS:
         simctl("pbcopy", self.udid, input=text)
         self.axe("key-combo", "--modifiers", "227", "--key", "25")
 
-    def clear_text(self) -> None:
+    def clear_text(self, length: int = 64) -> None:
         self.axe("key-combo", "--modifiers", "227", "--key", "4")
         self.axe("key", "42")
 

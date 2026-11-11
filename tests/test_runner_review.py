@@ -49,7 +49,7 @@ class FakeDriver:
     def type_text(self, text):
         pass
 
-    def clear_text(self):
+    def clear_text(self, length=64):
         pass
 
     def swipe(self, *args):
@@ -303,6 +303,15 @@ class RunnerReviewTests(unittest.TestCase):
         with mock.patch("yepitran.runner.sleep"):
             runner.type(runner.steps[0])
         self.assertEqual(self.driver.type_text.call_args_list, [mock.call("hello")])
+
+    def test_retry_clears_the_full_readback_length(self):
+        right = Node("hello", "", "", "TextField", 0, 100, 402, 60)
+        wrong = Node("x" * 150, "", "", "TextField", 0, 100, 402, 60)
+        runner = self.typing_reads("hello", [[right], [wrong], [right], [right]])
+        with mock.patch("yepitran.runner.sleep"):
+            runner.type(runner.steps[0])
+        self.assertEqual(self.driver.clear_text.call_args_list, [mock.call(150)])
+        self.assertEqual(self.driver.type_text.call_args_list, [mock.call("hello")] * 2)
 
 
 if __name__ == "__main__":

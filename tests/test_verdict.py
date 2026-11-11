@@ -57,7 +57,7 @@ class FakeDriver:
     def type_text(self, text):
         pass
 
-    def clear_text(self):
+    def clear_text(self, length=64):
         pass
 
     def swipe(self, *args):

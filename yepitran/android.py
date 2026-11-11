@@ -610,10 +610,12 @@ class Android:
         for i in range(0, len(text), 8):
             self.shell(f"input text {shlex.quote(text[i:i + 8].replace(' ', '%s'))}")
 
-    def clear_text(self) -> None:
+    def clear_text(self, length: int = 64) -> None:
         # Select-all + delete, then delete from the end in case select-all was not honoured.
-        self.shell("input keycombination 113 29; input keyevent 67; input keyevent KEYCODE_MOVE_END; "
-                   "input keyevent " + " ".join(["67"] * 64))
+        self.shell("input keycombination 113 29; input keyevent 67; "
+                   "input keycombination 113 123; input keyevent KEYCODE_MOVE_END")
+        for start in range(0, max(64, length), 64):
+            self.shell("input keyevent " + " ".join(["67"] * min(64, max(64, length) - start)))
 
     def swipe(self, x1: float, y1: float, x2: float, y2: float) -> None:
         self.shell(f"input swipe {x1:.0f} {y1:.0f} {x2:.0f} {y2:.0f} 500")
