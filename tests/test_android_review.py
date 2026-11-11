@@ -403,6 +403,16 @@ class AndroidReviewTests(unittest.TestCase):
         self.assertEqual("OK", nodes[0].label)
         self.assertEqual((1, 2, 10, 20), (nodes[0].x, nodes[0].y, nodes[0].w, nodes[0].h))
 
+    def test_password_metadata_survives_an_unreadable_value(self):
+        d = self.driver()
+        xml = ('<hierarchy><node class="android.widget.EditText" password="true" '
+               'content-desc="Password" text="" bounds="[0,0][100,40]" />'
+               '<node class="android.widget.EditText" password="false" '
+               'content-desc="Name" text="Ada" bounds="[0,50][100,90]" /></hierarchy>')
+        nodes = d.parse(xml)
+        self.assertEqual([(n.kind, n.label, n.value) for n in nodes],
+                         [("SecureTextField", "Password", ""), ("EditText", "Name", "Ada")])
+
     def test_input_text_quotes_shell_metacharacters_and_rejects_controls(self):
         d = self.driver()
         with patch.object(d, "shell") as shell:

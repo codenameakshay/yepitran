@@ -595,6 +595,8 @@ class Android:
             cls = n.get("class", "").rsplit(".", 1)[-1]
             if cls == "EditText":
                 label, value = desc or hint, text
+                if n.get("password") == "true":
+                    cls = "SecureTextField"
             else:
                 label, value = desc or text, text if desc and text != desc else ""
             nodes.append(Node(label=label, id=n.get("resource-id", "").rsplit("/", 1)[-1], value=value,
