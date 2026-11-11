@@ -315,6 +315,62 @@ class AndroidReviewTests(unittest.TestCase):
         self.assertNotIn("-snapshot", spawn.call_args.args[0])
         self.assertIn("-wipe-data", spawn.call_args.args[0])
 
+    def test_prepare_levels_with_an_existing_snapshot(self):
+        for enabled in (False, True):
+            for level in (1, 2, 3):
+                with self.subTest(snapshots=enabled, level=level), tempfile.TemporaryDirectory() as tmp:
+                    avd = Path(tmp) / "avd"
+                    snap = avd / "snapshots" / android.SNAPSHOT
+                    snap.mkdir(parents=True)
+                    (snap / "state").write_text("old clean state")
+                    boots, saved = [], []
+                    d = self.driver(Path(tmp))
+                    d.app = {"id": "app.test"}
+                    scenario = Mock(reverse=[], permissions="deny")
+
+                    def boot(args, *a, **kw):
+                        boots.append((args, snap.exists(), kw["env"]["ANDROID_AVD_HOME"]))
+                        return Mock()
+
+                    def save(*args, **kw):
+                        saved.append(args[1])
+                        snap.mkdir(parents=True, exist_ok=True)
+                        (snap / "state").write_text("fresh clean state")
+
+                    with patch.object(android, "AVD_DIR", avd), patch.object(android, "SNAPSHOTS", enabled), \
+                            patch.object(d, "load_app"), patch.object(d, "ensure_avd"), \
+                            patch.object(d, "kill_emulator"), patch.object(d, "start_adb_server"), \
+                            patch.object(android, "pick_ports", return_value=(5700, 5701)), \
+                            patch.object(android, "spawn", side_effect=boot), patch.object(d, "wait_booted"), \
+                            patch.object(d, "configure"), patch.object(d, "adb"), \
+                            patch.object(android, "console", side_effect=save), patch.object(d, "install"), \
+                            patch.object(d, "apply_reverse"), patch.object(d, "shell", return_value="9"):
+                        d.prepare(Path("app.apk"), scenario, level)
+                    args, existed_at_boot, avd_home = boots[0]
+                    self.assertEqual("-snapshot" in args, enabled and level == 1)
+                    self.assertEqual("-wipe-data" in args, not enabled or level != 1)
+                    self.assertEqual(existed_at_boot, level != 3)
+                    self.assertEqual(avd_home, str(Path(tmp)))
+                    self.assertEqual(saved, [f"avd snapshot save {android.SNAPSHOT}"] if enabled and level != 1 else [])
+                    expected = "fresh clean state" if enabled and level != 1 else "old clean state"
+                    if snap.exists():
+                        self.assertEqual((snap / "state").read_text(), expected)
+
+    def test_input_bursts_preserve_spaces_and_shell_metacharacters(self):
+        d = self.driver()
+        text = "seven77 'a'; $(id) more spaces"
+        received = []
+
+        def input_shell(command):
+            tool, verb, value = shlex.split(command)
+            self.assertEqual((tool, verb), ("input", "text"))
+            received.append(value.replace("%s", " "))
+
+        with patch.object(d, "shell", side_effect=input_shell):
+            d.type_text(text)
+        self.assertEqual("".join(received), text)
+        self.assertTrue(all(len(burst) <= 8 for burst in received))
+
     @patch.object(android, "SNAPSHOTS", True)
     def test_cold_boot_wipes_userdata_before_saving_clean_snapshot(self):
         d = self.driver()

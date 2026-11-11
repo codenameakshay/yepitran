@@ -313,6 +313,25 @@ class RunnerReviewTests(unittest.TestCase):
         self.assertEqual(self.driver.clear_text.call_args_list, [mock.call(150)])
         self.assertEqual(self.driver.type_text.call_args_list, [mock.call("hello")] * 2)
 
+    def test_delayed_rewrites_stop_after_three_entries(self):
+        right = Node("hello", "", "", "TextField", 0, 100, 402, 60)
+        wrong = Node("hhello", "", "", "TextField", 0, 100, 402, 60)
+        runner = self.typing_reads("hello", [[right], [wrong]] * 3)
+        with mock.patch("yepitran.runner.sleep") as sleep:
+            with self.assertRaisesRegex(InfraError, "3 times"):
+                runner.type(runner.steps[0])
+        self.assertEqual(self.driver.type_text.call_args_list, [mock.call("hello")] * 3)
+        self.assertEqual(runner.read.call_count, 6)
+        self.assertEqual(sleep.call_args_list, [mock.call(0.6)] + [mock.call(1.0)] * 3)
+
+    def test_empty_input_can_be_confirmed_in_an_empty_field(self):
+        empty = Node("", "", "", "TextField", 0, 100, 402, 60)
+        runner = self.typing_reads("", [[empty], [empty]])
+        with mock.patch("yepitran.runner.sleep"):
+            runner.type(runner.steps[0])
+        self.assertEqual(self.driver.type_text.call_args_list, [mock.call("")])
+        self.assertEqual(runner.read.call_count, 2)
+
 
 if __name__ == "__main__":
     unittest.main()
