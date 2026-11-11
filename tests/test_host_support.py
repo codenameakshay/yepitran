@@ -61,6 +61,9 @@ class HostConfigTests(unittest.TestCase):
                     patch.object(android, "run", side_effect=create) as run:
                 android.Android(lambda _: None, root).ensure_avd()
             self.assertNotIn("JAVA_HOME", run.call_args.kwargs["env"])
+            # The AVD must land in AVD_DIR on every host, not the tool's own default.
+            self.assertEqual(run.call_args.kwargs["env"]["ANDROID_AVD_HOME"], str(avd.parent))
+            self.assertEqual(run.call_args.args[0][run.call_args.args[0].index("-p") + 1], str(avd))
             self.assertEqual(run.call_args.args[0][0], str(root / "sdk/cmdline-tools/latest/bin/avdmanager"))
             self.assertIn(android.IMAGE, run.call_args.args[0])
             self.assertEqual(run.call_args.kwargs["input"], "no\n")

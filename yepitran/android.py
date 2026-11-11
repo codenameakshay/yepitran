@@ -304,8 +304,13 @@ class Android:
             avdmanager = SDK / "cmdline-tools/latest/bin/avdmanager"
             # Respect a caller's JDK; only replace macOS's Java stub when none was chosen.
             env = {"JAVA_HOME": JBR} if not os.environ.get("JAVA_HOME") and Path(JBR).exists() else {}
+            # Newer SDK tools on Linux default to ~/.config/.android/avd; pin the AVD (and its .ini)
+            # to AVD_DIR so avdmanager, the emulator and yepitran all look in the same place.
+            env["ANDROID_AVD_HOME"] = str(AVD_DIR.parent)
+            AVD_DIR.parent.mkdir(parents=True, exist_ok=True)
             self.log(f"creating AVD {AVD}")
-            run([str(avdmanager), "create", "avd", "-n", AVD, "-k", IMAGE, "-d", "pixel_7", "--force"],
+            run([str(avdmanager), "create", "avd", "-n", AVD, "-k", IMAGE, "-d", "pixel_7", "--force",
+                 "-p", str(AVD_DIR)],
                 input="no\n", env=env, timeout=180, what="avdmanager create")
         lines = [l for l in config.read_text().splitlines() if not l.startswith("disk.dataPartition.path")]
         keys = {l.split("=", 1)[0] for l in lines}
@@ -350,7 +355,7 @@ class Android:
             cmd.append("-wipe-data")
             self.log("wiping emulator data for a clean boot")
         t = time.monotonic()
-        self.emu = spawn(cmd, self.workdir / "emulator.log", env=ADB_ENV)
+        self.emu = spawn(cmd, self.workdir / "emulator.log", env={**ADB_ENV, "ANDROID_AVD_HOME": str(AVD_DIR.parent)})
         self.wait_booted()
         how = "from snapshot" if use_snap else "cold"
         self.log(f"emulator {self.serial} booted {how} in {time.monotonic() - t:.0f}s")
