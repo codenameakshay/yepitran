@@ -70,7 +70,7 @@ runs:
           echo '::error::set both simlock-url and simlock-token, or neither'; exit 2
         fi
 
-    - uses: actions/setup-python@v5
+    - uses: actions/setup-python@v6
       with:
         python-version: ${{ inputs.python-version }}
 
@@ -125,6 +125,16 @@ runs:
         if [ "$RUNNER_OS" != "Linux" ]; then
           echo "::error::Android in CI needs a Linux runner (hosted macOS runners cannot run the emulator), or a Simlock gateway"; exit 2
         fi
+        # The emulator, its image and its data need about 10 GB. Hosted runners ship nearly full of
+        # toolchains this job never uses; remove the largest ones only when space is short.
+        free_gb=$(df -BG --output=avail "$HOME" | tail -1 | tr -dc 0-9)
+        if [ "${RUNNER_ENVIRONMENT:-}" = "github-hosted" ] && [ "${free_gb:-0}" -lt 12 ]; then
+          echo "only ${free_gb} GB free; removing unused hosted toolchains"
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache/CodeQL \
+            /usr/share/swift /usr/local/share/boost /usr/local/lib/node_modules/azure-cli 2>/dev/null || true
+          sudo docker image prune -af >/dev/null 2>&1 || true
+          echo "now $(df -BG --output=avail "$HOME" | tail -1 | tr -dc 0-9) GB free"
+        fi
         # Hosted Linux runners have KVM; let the runner user open it.
         echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules >/dev/null
         sudo udevadm control --reload-rules && sudo udevadm trigger --name-match=kvm
@@ -158,7 +168,7 @@ runs:
 
     - name: Upload report, video and screenshots
       if: always()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: ${{ steps.report.outputs.artifact }}-${{ inputs.platform }}-${{ github.run_id }}-${{ github.run_attempt }}
         path: ${{ steps.report.outputs.path }}

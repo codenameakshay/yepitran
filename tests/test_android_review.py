@@ -203,6 +203,9 @@ class AndroidReviewTests(unittest.TestCase):
     def test_port_in_time_wait_counts_as_free_but_a_listener_does_not(self):
         import socket
         listener = socket.socket()
+        # adb's server sets SO_REUSEADDR, and Linux only lets a TIME_WAIT port be reused when both
+        # sockets set it; macOS does not care. Mirror adb so the test means the same on both.
+        listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         listener.bind(("127.0.0.1", 0))
         listener.listen()
         port = listener.getsockname()[1]
