@@ -1,0 +1,18 @@
+# Proves the Yep Todo demo: the list loads and a new task can be added.
+app: dev.yepitran.yepitran_demo
+timeout: 20s
+
+launch
+wait "Yep Todo"
+assert visible "Buy milk"
+screenshot home
+tap "Walk the dog"
+assert visible "1 of 3 done"
+tap "Add task"
+wait "New task"
+type "Try yepitran" into "Task title"
+tap "Save"
+assert gone "New task"
+assert visible "Try yepitran"
+assert visible "1 of 4 done"
+screenshot task-added

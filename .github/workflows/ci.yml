@@ -1,0 +1,63 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  unit:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        python: ["3.10", "3.13"]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - run: python -m pip install .
+      - name: Check the installed console script
+        working-directory: ${{ runner.temp }}
+        run: yepitran --version
+      - run: YEPITRAN_HOME="$RUNNER_TEMP/yep" python -m unittest discover -s tests
+
+  # The demo app, proven end to end on real devices with the action in this repo.
+  demo-ios:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - run: flutter build ios --simulator --debug
+        working-directory: examples/demo
+      - uses: ./
+        with:
+          platform: ios
+          app: examples/demo/build/ios/iphonesimulator/Runner.app
+          scenario: examples/demo/demo.proof
+
+  demo-android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - run: flutter build apk --profile --target-platform android-arm64,android-x64
+        working-directory: examples/demo
+      - uses: ./
+        with:
+          platform: android
+          app: examples/demo/build/app/outputs/flutter-apk/app-profile.apk
+          scenario: examples/demo/demo.proof

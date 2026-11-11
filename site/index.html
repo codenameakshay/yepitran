@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>yepitran: yep, it ran</title>
+<meta name="description" content="Prove a mobile app works on a real iOS Simulator and Android Emulator. Video, screenshots and a verdict that never blames your app for a flaky device. Free and open source.">
+<meta property="og:title" content="yepitran: yep, it ran">
+<meta property="og:description" content="Prove your mobile app works on real iOS and Android devices. Video, screenshots, and a verdict you can trust.">
+<meta property="og:image" content="https://yepitran.dev/assets/og.png">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%2316a34a'/><path d='M9 16.5l4.5 4.5L23 11.5' stroke='white' stroke-width='3.2' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #fbfbf8;
+    --surface: #ffffff;
+    --ink: #16181d;
+    --muted: #5d636f;
+    --line: #e6e5df;
+    --code-bg: #f3f2ec;
+    --green: #16a34a;
+    --green-soft: #e7f6ec;
+    --red: #dc2626;
+    --red-soft: #fdecec;
+    --amber: #b45309;
+    --amber-soft: #fdf3e2;
+    --radius: 14px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0f1114; --surface: #171a1f; --ink: #eef0f3; --muted: #9aa1ad; --line: #262a31;
+      --code-bg: #1d2127; --green: #34d399; --green-soft: #12291f; --red: #f87171; --red-soft: #2c1617;
+      --amber: #fbbf24; --amber-soft: #2b2312;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f1114; --surface: #171a1f; --ink: #eef0f3; --muted: #9aa1ad; --line: #262a31;
+    --code-bg: #1d2127; --green: #34d399; --green-soft: #12291f; --red: #f87171; --red-soft: #2c1617;
+    --amber: #fbbf24; --amber-soft: #2b2312;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 16px/1.6 Inter, ui-sans-serif, system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: inherit; }
+  code, pre { font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.875rem; }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 0 16px; }
+  nav { display: flex; align-items: center; justify-content: space-between; padding: 20px 0; }
+  .logo { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 1.15rem; text-decoration: none; letter-spacing: -0.01em; }
+  .logo svg { width: 28px; height: 28px; }
+  .nav-links { display: flex; gap: 20px; font-size: 0.95rem; color: var(--muted); }
+  .nav-links a { text-decoration: none; }
+  .nav-links a:hover { color: var(--ink); }
+
+  .hero { padding: 48px 0 32px; display: grid; gap: 40px; grid-template-columns: 1.05fr 0.95fr; align-items: center; }
+  h1 { font-size: clamp(2.6rem, 6vw, 4.2rem); line-height: 1.02; letter-spacing: -0.035em; margin: 0 0 18px; font-weight: 800; text-wrap: balance; }
+  h1 .yep { color: var(--green); }
+  .lede { font-size: 1.15rem; color: var(--muted); margin: 0 0 28px; max-width: 34rem; text-wrap: pretty; }
+  .install {
+    display: flex; align-items: center; gap: 12px; background: var(--surface); border: 1px solid var(--line);
+    border-radius: 12px; padding: 12px 12px 12px 16px; max-width: 34rem;
+  }
+  .install code { flex: 1; overflow-x: auto; white-space: nowrap; }
+  .install code::before { content: "$ "; color: var(--muted); }
+  button.copy {
+    font: 500 0.85rem Inter, sans-serif; border: 1px solid var(--line); background: var(--bg); color: var(--ink);
+    border-radius: 8px; padding: 6px 12px; cursor: pointer; min-height: 32px;
+  }
+  button.copy:hover { border-color: var(--muted); }
+  button.copy:focus-visible, a:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
+  .cta-row { display: flex; gap: 12px; margin-top: 16px; flex-wrap: wrap; }
+  .btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 10px; font-weight: 600; text-decoration: none; font-size: 0.95rem; }
+  .btn.primary { background: var(--ink); color: var(--bg); }
+  .btn.ghost { border: 1px solid var(--line); }
+
+  .devices { display: flex; gap: 14px; justify-content: center; }
+  .phone {
+    flex: 1; max-width: 220px; aspect-ratio: 9 / 19.5; border-radius: 30px; overflow: hidden;
+    background: #000; border: 6px solid #1b1d22; box-shadow: 0 24px 50px -20px rgba(0,0,0,0.35);
+    position: relative;
+  }
+  .phone img, .phone video { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .phone .tag {
+    position: absolute; left: 10px; bottom: 10px; display: inline-flex; align-items: center; gap: 6px;
+    background: rgba(22,163,74,0.95); color: #fff; font-size: 0.75rem; font-weight: 700;
+    padding: 4px 10px 4px 8px; border-radius: 999px; letter-spacing: 0.02em;
+  }
+  .caption { text-align: center; color: var(--muted); font-size: 0.85rem; margin-top: 12px; }
+
+  section { padding: 56px 0; border-top: 1px solid var(--line); }
+  h2 { font-size: clamp(1.6rem, 3.5vw, 2.1rem); letter-spacing: -0.025em; margin: 0 0 10px; line-height: 1.15; }
+  .sub { color: var(--muted); margin: 0 0 28px; max-width: 42rem; }
+
+  .verdicts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px; }
+  .pill { display: inline-block; font: 700 0.8rem "JetBrains Mono", monospace; padding: 4px 10px; border-radius: 999px; margin-bottom: 10px; }
+  .pill.pass { background: var(--green-soft); color: var(--green); }
+  .pill.app { background: var(--red-soft); color: var(--red); }
+  .pill.infra { background: var(--amber-soft); color: var(--amber); }
+  .card p { margin: 0; color: var(--muted); font-size: 0.95rem; }
+  .card strong { color: var(--ink); }
+
+  .split { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; align-items: start; }
+  .hero > *, .split > * { min-width: 0; }  /* let long code lines scroll instead of widening the page */
+  pre {
+    margin: 0; background: var(--code-bg); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 18px 20px; overflow-x: auto; line-height: 1.65;
+  }
+  .k { color: var(--green); font-weight: 500; }
+  .s { color: var(--amber); }
+  .c { color: var(--muted); }
+  ul.points { margin: 0; padding: 0; list-style: none; display: grid; gap: 14px; }
+  ul.points li { display: grid; grid-template-columns: 22px 1fr; gap: 10px; }
+  ul.points li::before {
+    content: ""; width: 18px; height: 18px; margin-top: 4px; border-radius: 50%; background: var(--green-soft);
+    box-shadow: inset 0 0 0 5px var(--green-soft), inset 0 0 0 9px var(--green);
+  }
+  ul.points b { display: block; }
+  ul.points span { color: var(--muted); font-size: 0.95rem; }
+
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 28px; }
+  .stat { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px 20px; }
+  .stat b { display: block; font-size: 1.6rem; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+  .stat span { color: var(--muted); font-size: 0.9rem; }
+
+  footer { padding: 40px 0 56px; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.9rem; display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+
+  @media (max-width: 820px) {
+    .hero, .split { grid-template-columns: 1fr; }
+    .hero { padding-top: 24px; }
+    .verdicts, .stats { grid-template-columns: 1fr; }
+    .nav-links a.hide-sm { display: none; }
+    .phone { border-radius: 24px; border-width: 5px; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav>
+    <a class="logo" href="#" aria-label="yepitran home">
+      <svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="var(--green)"/><path d="M9 16.5l4.5 4.5L23 11.5" stroke="#fff" stroke-width="3.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      yepitran
+    </a>
+    <div class="nav-links">
+      <a class="hide-sm" href="#how">How it works</a>
+      <a class="hide-sm" href="#ci">GitHub Action</a>
+      <a href="https://github.com/codenameakshay/yepitran">GitHub</a>
+    </div>
+  </nav>
+
+  <header class="hero">
+    <div>
+      <h1><span class="yep">Yep,</span> it ran.<br>On real devices.</h1>
+      <p class="lede">yepitran runs your mobile app on a real iOS Simulator and Android Emulator, follows a short script, and hands back a video, screenshots and a verdict you can trust. It never blames your app for a flaky device.</p>
+      <div class="install">
+        <code id="cmd">pipx install git+https://github.com/codenameakshay/yepitran</code>
+        <button class="copy" data-copy="cmd" type="button">Copy</button>
+      </div>
+      <div class="cta-row">
+        <a class="btn primary" href="https://github.com/codenameakshay/yepitran#try-it-in-5-minutes">Try the demo</a>
+        <a class="btn ghost" href="https://github.com/codenameakshay/yepitran">Read the docs</a>
+      </div>
+    </div>
+    <div>
+      <div class="devices">
+        <div class="phone"><video src="assets/ios.mp4" poster="assets/ios.png" autoplay muted loop playsinline aria-label="yepitran running the demo on an iOS Simulator"></video><span class="tag">iOS · PASS</span></div>
+        <div class="phone"><video src="assets/android.mp4" poster="assets/android.png" autoplay muted loop playsinline aria-label="yepitran running the demo on an Android Emulator"></video><span class="tag">Android · PASS</span></div>
+      </div>
+      <p class="caption">The demo scenario, recorded by yepitran on both platforms.</p>
+    </div>
+  </header>
+
+  <section id="how">
+    <h2>One verdict. No guessing.</h2>
+    <p class="sub">Every attempt starts on a cleanly booted device. A failure counts against your app only when it happens again on a fresh one.</p>
+    <div class="verdicts">
+      <div class="card"><span class="pill pass">PASS</span><p><strong>Every step passed on a real device.</strong> Share the video and screenshots with your reviewer.</p></div>
+      <div class="card"><span class="pill app">APP FAIL</span><p><strong>Your app did the wrong thing, twice,</strong> on two clean devices. The report shows exactly what was on screen.</p></div>
+      <div class="card"><span class="pill infra">INFRA FAIL</span><p><strong>The device or tooling broke.</strong> This says nothing about your app, and the report says what yepitran tried.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="split">
+      <div>
+        <h2>A script anyone can read</h2>
+        <p class="sub">One step per line, matched against what the user actually sees. Your coding agent can write it from a PR description.</p>
+        <ul class="points">
+          <li><div><b>Taps that land</b><span>It taps the part of a button that nothing else covers, so sheets and overlays don't steal the tap.</span></div></li>
+          <li><div><b>Typing that sticks</b><span>Text is read back after every entry, so autocorrect can't quietly change it.</span></div></li>
+          <li><div><b>Its own devices</b><span>yepitran uses only its own simulator and emulator, so it never touches another session's device.</span></div></li>
+        </ul>
+      </div>
+<pre><span class="c"># add-task.proof</span>
+<span class="k">launch</span>
+<span class="k">wait</span> <span class="s">"Yep Todo"</span>
+<span class="k">tap</span> <span class="s">"Add task"</span>
+<span class="k">type</span> <span class="s">"Try yepitran"</span> <span class="k">into</span> <span class="s">"Task title"</span>
+<span class="k">tap</span> <span class="s">"Save"</span>
+<span class="k">assert gone</span> <span class="s">"New task"</span>
+<span class="k">assert visible</span> <span class="s">"Try yepitran"</span>
+<span class="k">screenshot</span> task-added
+
+<span class="c">$ yepitran Runner.app app.apk add-task.proof</span>
+<span class="k">PASS</span>  ios: all 8 steps passed
+<span class="k">PASS</span>  android: all 8 steps passed</pre>
+    </div>
+  </section>
+
+  <section id="ci">
+    <div class="split">
+      <div>
+        <h2>Proof on every pull request</h2>
+        <p class="sub">The GitHub Action runs your scenario on GitHub's runners, uploads the video and screenshots, and can post the verdict on the PR. Free for public repos.</p>
+        <ul class="points">
+          <li><div><b>iOS on macOS runners</b><span>A fresh simulator for every run.</span></div></li>
+          <li><div><b>Android on Linux runners</b><span>A real emulator with hardware acceleration.</span></div></li>
+          <li><div><b>Fails the check only on a real failure</b><span>The step fails unless the verdict is PASS, and the report says which kind of failure it was.</span></div></li>
+        </ul>
+      </div>
+<pre><span class="k">- uses:</span> codenameakshay/yepitran@v0
+  <span class="k">with:</span>
+    <span class="k">platform:</span> ios
+    <span class="k">app:</span> build/ios/iphonesimulator/Runner.app
+    <span class="k">scenario:</span> .yepitran/smoke.proof
+    <span class="k">comment:</span> true</pre>
+    </div>
+  </section>
+
+  <section>
+    <h2>Built to never flake on infrastructure</h2>
+    <p class="sub">Simulators that hang, adb servers that die and emulators that crash are recovered, or reported plainly. We break it on purpose before every release.</p>
+    <div class="stats">
+      <div class="stat"><b>10 / 10</b><span>iOS runs passed first try in a row</span></div>
+      <div class="stat"><b>10 / 10</b><span>Android runs passed first try in a row</span></div>
+      <div class="stat"><b>0</b><span>infra failures blamed on the app</span></div>
+    </div>
+  </section>
+
+  <footer>
+    <span>yepitran is free and open source under the MIT license.</span>
+    <span><a href="https://github.com/codenameakshay/yepitran">GitHub</a> · made by <a href="https://github.com/codenameakshay">codenameakshay</a></span>
+  </footer>
+</div>
+<script>
+  document.querySelectorAll("button.copy").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var text = document.getElementById(b.dataset.copy).textContent;
+      try {
+        navigator.clipboard.writeText(text).then(function () {
+          b.textContent = "Copied";
+          setTimeout(function () { b.textContent = "Copy"; }, 1500);
+        });
+      } catch (e) { /* clipboard unavailable: the command stays selectable */ }
+    });
+  });
+</script>
+</body>
+</html>

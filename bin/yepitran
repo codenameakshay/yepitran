@@ -1,0 +1,4 @@
+#!/bin/sh
+# Resolve symlinks so `ln -s .../bin/yepitran ~/.local/bin/yepitran` works.
+self="$0"; while [ -L "$self" ]; do d=$(dirname "$self"); self=$(readlink "$self"); case "$self" in /*) ;; *) self="$d/$self";; esac; done
+PYTHONPATH="$(cd "$(dirname "$self")/.." && pwd)${PYTHONPATH:+:$PYTHONPATH}" exec python3 -m yepitran.cli "$@"

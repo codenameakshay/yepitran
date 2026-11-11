@@ -1,0 +1,38 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "yepitran"
+version = "0.1.0"
+description = "Prove a mobile app works on a real iOS Simulator and Android Emulator: video, screenshots, and a PASS / APP FAIL / INFRA FAIL verdict."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.10"
+authors = [{ name = "Akshay Maurya" }]
+keywords = ["ios", "android", "simulator", "emulator", "e2e", "testing", "flutter", "ci", "agents"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Operating System :: MacOS",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Topic :: Software Development :: Testing",
+]
+dependencies = []
+
+[project.urls]
+Homepage = "https://yepitran.dev"
+Repository = "https://github.com/codenameakshay/yepitran"
+Issues = "https://github.com/codenameakshay/yepitran/issues"
+
+[project.scripts]
+yepitran = "yepitran.cli:main"
+
+[tool.hatch.build.targets.sdist]
+include = ["yepitran", "README.md", "LICENSE", "examples/demo/demo.proof"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["yepitran"]

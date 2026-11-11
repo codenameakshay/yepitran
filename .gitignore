@@ -1,0 +1,5 @@
+yepitran-out/
+proofrun-out/
+__pycache__/
+*.pyc
+dist/

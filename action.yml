@@ -1,0 +1,189 @@
+name: yepitran
+description: Prove a mobile app works on a real iOS Simulator or Android Emulator. Video, screenshots and a PASS / APP FAIL / INFRA FAIL verdict.
+author: codenameakshay
+branding:
+  icon: check-circle
+  color: green
+
+inputs:
+  scenario:
+    description: Path to the scenario file (.proof).
+    required: true
+  app:
+    description: Path to a simulator Runner.app (iOS), an .apk (Android), or a Flutter project directory.
+    required: true
+  platform:
+    description: ios or android. iOS needs a macOS runner; Android needs a Linux runner (KVM) or a Simlock gateway.
+    required: true
+  comment:
+    description: "Post the report as a PR comment (needs `pull-requests: write`)."
+    required: false
+    default: "false"
+  simlock-url:
+    description: Optional Simlock gateway URL. When set with simlock-token, Android runs on that fleet instead of a local emulator.
+    required: false
+    default: ""
+  simlock-token:
+    description: Optional Simlock agent token (pass a secret).
+    required: false
+    default: ""
+  python-version:
+    description: Python used to run yepitran.
+    required: false
+    default: "3.12"
+
+outputs:
+  verdict:
+    description: PASS, APP FAIL or INFRA FAIL.
+    value: ${{ steps.run.outputs.verdict || 'INFRA FAIL' }}
+  report:
+    description: Path to the report folder.
+    value: ${{ steps.report.outputs.path }}
+
+runs:
+  using: composite
+  steps:
+    - name: Prepare fallback report
+      id: report
+      shell: bash
+      run: |
+        out=$(mktemp -d "$RUNNER_TEMP/yepitran-report.XXXXXX")
+        echo "path=$out" >> "$GITHUB_OUTPUT"
+        echo "artifact=$(basename "$out")" >> "$GITHUB_OUTPUT"
+        echo '# yepitran: INFRA FAIL' > "$out/report.md"
+        echo 'Setup or the run did not finish. Check the workflow logs.' >> "$out/report.md"
+        echo '{"verdict":"INFRA FAIL","scenario":"setup","reason":"Setup or run did not finish","legs":[]}' > "$out/verdict.json"
+
+    - name: Validate inputs
+      shell: bash
+      env:
+        PLATFORM: ${{ inputs.platform }}
+        SIMLOCK_URL: ${{ inputs.simlock-url }}
+        SIMLOCK_TOKEN: ${{ inputs.simlock-token }}
+      run: |
+        case "$PLATFORM" in
+          ios|android) ;;
+          *) echo '::error::platform must be ios or android'; exit 2 ;;
+        esac
+        if { [ -n "$SIMLOCK_URL" ] && [ -z "$SIMLOCK_TOKEN" ]; } ||
+           { [ -z "$SIMLOCK_URL" ] && [ -n "$SIMLOCK_TOKEN" ]; }; then
+          echo '::error::set both simlock-url and simlock-token, or neither'; exit 2
+        fi
+
+    - uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - name: Install yepitran
+      shell: bash
+      env:
+        ACTION_PATH: ${{ github.action_path }}
+      run: python -m pip install --quiet "$ACTION_PATH"
+
+    - name: Install iOS tools
+      if: inputs.platform == 'ios'
+      shell: bash
+      run: |
+        if [ "$RUNNER_OS" != "macOS" ]; then echo "::error::iOS needs a macOS runner"; exit 2; fi
+        brew install --quiet cameroncooke/axe/axe ffmpeg
+
+    - name: Install Android client tools
+      if: inputs.platform == 'android'
+      shell: bash
+      run: |
+        sdk_root="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
+        manager="$sdk_root/cmdline-tools/latest/bin/sdkmanager"
+        if [ ! -x "$manager" ]; then
+          echo '::error::Android SDK command-line tools are missing; set ANDROID_HOME'; exit 2
+        fi
+        echo "ANDROID_HOME=$sdk_root" >> "$GITHUB_ENV"
+        if [ "$RUNNER_OS" = "Linux" ]; then
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg lsof >/dev/null
+        elif [ "$RUNNER_OS" = "macOS" ]; then
+          brew install --quiet ffmpeg
+        else
+          echo '::error::Android needs a Linux or macOS runner'; exit 2
+        fi
+        yes | "$manager" --licenses >/dev/null || true
+        "$manager" --install platform-tools "build-tools;36.0.0" >/dev/null
+
+    - name: Install Android emulator
+      if: inputs.platform == 'android' && inputs.simlock-url == ''
+      shell: bash
+      run: |
+        if [ "$RUNNER_OS" != "Linux" ]; then
+          echo "::error::Android in CI needs a Linux runner (hosted macOS runners cannot run the emulator), or a Simlock gateway"; exit 2
+        fi
+        # Hosted Linux runners have KVM; let the runner user open it.
+        echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules >/dev/null
+        sudo udevadm control --reload-rules && sudo udevadm trigger --name-match=kvm
+        "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install emulator \
+          "system-images;android-36;google_apis;x86_64" >/dev/null
+
+    - name: Run the scenario
+      id: run
+      shell: bash
+      env:
+        YEPITRAN_SIMLOCK_URL: ${{ inputs.simlock-url }}
+        YEPITRAN_SIMLOCK_TOKEN: ${{ inputs.simlock-token }}
+        YEPITRAN_ANDROID: ${{ inputs.simlock-url != '' && 'simlock' || 'local' }}
+        APP: ${{ inputs.app }}
+        SCENARIO: ${{ inputs.scenario }}
+        PLATFORM: ${{ inputs.platform }}
+        REPORT_DIR: ${{ steps.report.outputs.path }}
+      run: |
+        out="$REPORT_DIR"
+        set +e
+        yepitran run "$APP" "$SCENARIO" --platform "$PLATFORM" --out "$out" 2>&1 | tee "$out/run.log"
+        code=${PIPESTATUS[0]}
+        set -e
+        verdict=$(python -c "import json,sys; v=json.load(open(sys.argv[1]))['verdict']; assert v in ('PASS','APP FAIL','INFRA FAIL'); print(v)" "$out/verdict.json" 2>/dev/null || echo "INFRA FAIL")
+        case "$code:$verdict" in
+          '0:PASS'|'1:APP FAIL'|'2:INFRA FAIL') ;;
+          *) verdict='INFRA FAIL'; code=2 ;;
+        esac
+        echo "verdict=$verdict" >> "$GITHUB_OUTPUT"
+        echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+
+    - name: Upload report, video and screenshots
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ steps.report.outputs.artifact }}-${{ inputs.platform }}-${{ github.run_id }}-${{ github.run_attempt }}
+        path: ${{ steps.report.outputs.path }}
+        if-no-files-found: warn
+
+    - name: Summarize the verdict
+      if: always()
+      shell: bash
+      env:
+        REPORT_DIR: ${{ steps.report.outputs.path }}
+      run: |
+        if [ -f "$REPORT_DIR/report.md" ]; then cat "$REPORT_DIR/report.md" >> "$GITHUB_STEP_SUMMARY"; fi
+
+    - name: Comment on the PR
+      if: >-
+        always() && inputs.comment == 'true' && github.event_name == 'pull_request' &&
+        github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]'
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+        REPORT_DIR: ${{ steps.report.outputs.path }}
+        RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        PR_NUMBER: ${{ github.event.pull_request.number }}
+        REPOSITORY: ${{ github.repository }}
+      run: |
+        report="$REPORT_DIR/report.md"
+        [ -f "$report" ] || exit 0
+        { cat "$report"; echo; echo "Video and screenshots: [workflow artifacts]($RUN_URL)"; } > "$RUNNER_TEMP/comment.md"
+        gh pr comment "$PR_NUMBER" --repo "$REPOSITORY" --body-file "$RUNNER_TEMP/comment.md"
+
+    - name: Fail on a failed verdict
+      if: always() && (steps.run.outputs.exit_code != '0' || steps.run.outputs.verdict != 'PASS')
+      shell: bash
+      env:
+        VERDICT: ${{ steps.run.outputs.verdict || 'INFRA FAIL' }}
+      run: |
+        echo "::error::yepitran verdict: $VERDICT"
+        exit 1
