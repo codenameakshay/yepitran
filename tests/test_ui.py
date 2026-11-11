@@ -90,6 +90,7 @@ class TextLandedTests(unittest.TestCase):
             ("🙂", "🙃", False), ("🙂", "🙂🙂", False), ("🙂", "🙂", True),
             ("hello🙂", "hello", False), ("hello🙂", "hello🙂🙂", False),
             ("hello🙂", "hello🙂", True), ("hello", "", False),
+            ("a🙂b", "ab🙂", False), ("a🙂b", "a🙂b", True),
         ]:
             with self.subTest(typed=typed, shown=shown):
                 self.assertEqual(text_landed(typed, shown), expected)
@@ -98,6 +99,7 @@ class TextLandedTests(unittest.TestCase):
         for typed, shown, expected in [
             ("café", "cafe\u0301", True), ("Straße", "STRASSE", True),
             ("नमस्ते", "नमस्त", False), ("नमस्ते", "नमस्ते", True),
+            ("का ख", "क खा", False),
             ("你好", "你 好", False),
         ]:
             with self.subTest(typed=typed, shown=shown):
@@ -107,6 +109,11 @@ class TextLandedTests(unittest.TestCase):
         self.assertTrue(text_landed("Ship yepitran 42", "Ship yepitran 42"))
         self.assertTrue(text_landed("hello", "Hello"))
         self.assertTrue(text_landed("5551234", "+1 (555) 1234"))
+        self.assertTrue(text_landed("1234", "$1,234"))
+        self.assertTrue(text_landed("1234", "1 234 €"))
+        self.assertTrue(text_landed("1234", "+1,234"))
+        self.assertTrue(text_landed("$1234", "$1,234"))
+        self.assertFalse(text_landed("$1234", "1,234"))
 
     def test_dropped_character_is_detected(self):
         self.assertFalse(text_landed("hello", "helo"))

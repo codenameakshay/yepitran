@@ -120,17 +120,25 @@ def text_landed(typed: str, shown: str) -> bool:
     if not any(c.isalnum() for c in t):
         return t == s
     # Separators may be formatting, but marks and symbols (including emoji and
-    # their joiners) are content. Do not silently discard them during read-back.
-    def content(text: str) -> str:
-        return "".join(c for c in text if unicodedata.category(c)[0] in "MSC")
+    # their joiners) are content. Currency signs in numeric fields are formatting.
+    def content(text: str, shift: int = 0) -> list[tuple[int, str]]:
+        out, n = [], shift
+        for c in text:
+            if c.isalnum():
+                n += 1
+            elif unicodedata.category(c)[0] in "MSC" and not (
+                    numeric and unicodedata.category(c) == "Sc" and c not in t):
+                out.append((n, c))
+        return out
 
     ta = [c for c in t if c.isalnum()]
+    numeric = all(c.isdigit() for c in ta)
     sa = [c for c in s if c.isalnum()]
     extra = len(sa) - len(ta)
     if extra < 0 or sa[extra:] != ta or not all(c.isdigit() for c in sa[:extra]):
         return False
-    formatted = s[1:] if extra and s.startswith("+") and not t.startswith("+") else s
-    if content(t) != content(formatted):
+    formatted = s[1:] if (extra or numeric) and s.startswith("+") and not t.startswith("+") else s
+    if content(t, extra) != content(formatted):
         return False
 
     def word_breaks(text: str, shift: int = 0) -> set[int]:
