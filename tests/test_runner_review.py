@@ -239,9 +239,6 @@ class RunnerReviewTests(unittest.TestCase):
                 case.doCleanups()
 
 
-if __name__ == "__main__":
-    unittest.main()
-
     def test_text_rewritten_after_it_looked_right_is_retyped(self):
         runner = self.runner('type "Try yepitran" into "Task title"\n')
         typed = []
@@ -262,3 +259,51 @@ if __name__ == "__main__":
         with mock.patch("yepitran.runner.sleep", lambda s: None):
             runner.type(runner.steps[0])
         self.assertEqual(2, len(typed))
+
+    def typing_reads(self, text, readings):
+        runner = self.runner(f'type "{text}" into "Task title"\n')
+        field = Node("Task title", "", "", "TextField", 0, 100, 402, 60)
+        runner.find = mock.Mock(return_value=(field, [field]))
+        runner.read = mock.Mock(side_effect=readings)
+        self.driver.type_text = mock.Mock()
+        self.driver.clear_text = mock.Mock()
+        return runner
+
+    def test_delayed_read_uses_flutter_ios_label(self):
+        field = Node("hello", "", "", "TextField", 0, 100, 402, 60)
+        runner = self.typing_reads("hello", [[field], [field]])
+        with mock.patch("yepitran.runner.sleep"):
+            runner.type(runner.steps[0])
+        self.assertEqual(self.driver.type_text.call_args_list, [mock.call("hello")])
+        self.assertEqual(runner.read.call_count, 2)
+
+    def test_delayed_read_accepts_secure_mask(self):
+        visible = Node("Task title", "", "hello", "TextField", 0, 100, 402, 60)
+        masked = Node("Task title", "", "•••••", "SecureTextField", 0, 100, 402, 60)
+        runner = self.typing_reads("hello", [[visible], [masked]])
+        with mock.patch("yepitran.runner.sleep"):
+            runner.type(runner.steps[0])
+        self.assertEqual(self.driver.type_text.call_args_list, [mock.call("hello")])
+
+    def test_empty_plain_field_does_not_prove_nonempty_input(self):
+        empty = Node("", "", "", "TextField", 0, 100, 402, 60)
+        runner = self.typing_reads("hello", [])
+        runner.read = mock.Mock(return_value=[empty])
+        clock = [0.0]
+        with mock.patch("yepitran.runner.time.monotonic", side_effect=lambda: clock[0]), \
+                mock.patch("yepitran.runner.sleep", side_effect=lambda s: clock.__setitem__(0, clock[0] + s)):
+            with self.assertRaisesRegex(InfraError, '3 times'):
+                runner.type(runner.steps[0])
+        self.assertEqual(self.driver.type_text.call_args_list, [mock.call("hello")] * 3)
+        self.assertAlmostEqual(clock[0], 17.1)
+
+    def test_explicit_secure_field_does_not_compare_its_label(self):
+        secure = Node("Password", "", "", "SecureTextField", 0, 100, 402, 60)
+        runner = self.typing_reads("hello", [[secure], [secure]])
+        with mock.patch("yepitran.runner.sleep"):
+            runner.type(runner.steps[0])
+        self.assertEqual(self.driver.type_text.call_args_list, [mock.call("hello")])
+
+
+if __name__ == "__main__":
+    unittest.main()

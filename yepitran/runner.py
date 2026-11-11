@@ -471,25 +471,29 @@ class LegRunner:
             self.d.tap(*point)
             sleep(0.6)
         shown = ""
+
+        def readback() -> bool:
+            nonlocal shown
+            field_ = self.field_at(self.read(), point)
+            # Flutter on iOS exposes text as the label, Android as the value.
+            shown = (field_.value or field_.label) if field_ else ""
+            if field_ is None or field_.kind == "SecureTextField" or (shown and set(shown) <= set("•●*")):
+                return True  # secure or unexposed; an empty ordinary field is still readable
+            return ui.text_landed(s.text, shown)
+
         for attempt in range(3):
             self.d.type_text(s.text)
             if point is None:
                 return
             deadline = time.monotonic() + self.budget(5)
             while True:  # a paste can wait behind an "Allow Paste" prompt that read() answers
-                field_ = self.field_at(self.read(), point)
-                # Flutter on iOS reports a text field's text as its label, Android as its value.
-                shown = (field_.value or field_.label) if field_ else ""
-                if field_ is None or set(shown) <= set("•●*"):
-                    return  # nothing readable to check against (secure or unexposed field)
-                if ui.text_landed(s.text, shown) or time.monotonic() > deadline:
+                landed = readback()
+                if landed or time.monotonic() > deadline:
                     break
                 sleep(0.5)
-            if ui.text_landed(s.text, shown):
+            if landed:
                 sleep(1.0)  # a slow keyboard can still rewrite the field after it looked right
-                field_ = self.field_at(self.read(), point)
-                shown = (field_.value or field_.label) if field_ else shown
-                if field_ is None or ui.text_landed(s.text, shown):
+                if readback():
                     return
             self.log(f'typed "{s.text}" but the field shows "{shown}"; clearing and retyping')
             self.d.tap(*point)
