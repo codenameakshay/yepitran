@@ -83,6 +83,26 @@ class TapPointTests(unittest.TestCase):
 
 
 class TextLandedTests(unittest.TestCase):
+    def test_empty_and_symbol_only_input_must_match(self):
+        for typed, shown, expected in [
+            ("", "", True), ("", "+1", False), ("!!!", "", False),
+            ("!!!", "!", False), ("!!!", "!!!", True),
+            ("🙂", "🙃", False), ("🙂", "🙂🙂", False), ("🙂", "🙂", True),
+            ("hello🙂", "hello", False), ("hello🙂", "hello🙂🙂", False),
+            ("hello🙂", "hello🙂", True), ("hello", "", False),
+        ]:
+            with self.subTest(typed=typed, shown=shown):
+                self.assertEqual(text_landed(typed, shown), expected)
+
+    def test_unicode_readback_preserves_marks_and_canonical_equivalence(self):
+        for typed, shown, expected in [
+            ("café", "cafe\u0301", True), ("Straße", "STRASSE", True),
+            ("नमस्ते", "नमस्त", False), ("नमस्ते", "नमस्ते", True),
+            ("你好", "你 好", False),
+        ]:
+            with self.subTest(typed=typed, shown=shown):
+                self.assertEqual(text_landed(typed, shown), expected)
+
     def test_typed_characters_in_order_count_despite_reformatting(self):
         self.assertTrue(text_landed("Ship yepitran 42", "Ship yepitran 42"))
         self.assertTrue(text_landed("hello", "Hello"))
