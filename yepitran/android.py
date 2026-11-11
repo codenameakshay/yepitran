@@ -408,7 +408,7 @@ class Android:
                 sleep(every)
 
     # Run one at a time with a short limit: on a slow software-rendered emulator (Linux CI) one of
-    # these can hang for minutes. A stuck one is skipped and named; it must not fail the attempt.
+    # these can hang for minutes. Skip a stuck optional command only if the device still answers.
     SETUP = ("settings put global heads_up_notifications_enabled 0",
              "settings put secure immersive_mode_confirmations confirmed",
              "settings put system screen_off_timeout 2147483647",
@@ -430,11 +430,19 @@ class Android:
         skipped = []
         for command in self.SETUP:
             try:
-                self.adb_raw("shell", command, timeout=30)
-            except InfraError:
-                skipped.append(command)
+                result = self.adb_raw("shell", command, timeout=30)
+                if result.returncode == 0:
+                    continue
+                reason = proc.tail(result.stderr or result.stdout, 1) or f"exit {result.returncode}"
+            except InfraError as e:
+                reason = str(e)
+            self.check_alive()
+            state = self.adb_raw("get-state", timeout=5)
+            if state.returncode != 0 or state.stdout.strip() != "device":
+                raise InfraError(f"device setup: {command}: {reason}; adb no longer answers as a device")
+            skipped.append(f"{command} ({reason})")
         if skipped:
-            self.log(f"device setup: no answer from {'; '.join(skipped)}; continuing without it")
+            self.log(f"device setup: skipped {'; '.join(skipped)}; continuing without it")
 
     def install(self, apk: Path, permissions: str) -> None:
         self.adb("uninstall", self.app["id"], check=False, timeout=120)

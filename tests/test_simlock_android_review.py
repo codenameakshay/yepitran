@@ -13,6 +13,26 @@ from yepitran import android, proc, simlock
 
 
 class SimlockAndroidReviewTests(unittest.TestCase):
+    def test_configure_stops_when_the_lease_ends(self):
+        self.driver.lease_id = "L"
+        logs = []
+        self.driver.log = logs.append
+        self.driver.client.exec.side_effect = simlock.Error(404, "UNKNOWN_LEASE", "ended")
+        with self.assertRaisesRegex(proc.InfraError, "ended the lease"):
+            self.driver.configure()
+        self.assertEqual(self.driver.lost, "simlock ended the lease (expired or taken back)")
+
+    def test_configure_runs_setup_through_the_gateway(self):
+        self.driver.lease_id = "L"
+        logs = []
+        self.driver.log = logs.append
+        self.driver.client.exec.return_value = (1, "", "unsupported setting")
+        # The adb transport still answers, even if an optional setting is unsupported.
+        self.driver.client.exec.side_effect = lambda lease, tool, args, **kw: (
+            (0, "device\n", "") if args == ["get-state"] else (1, "", "unsupported setting"))
+        self.driver.configure()
+        self.assertTrue(any("unsupported setting" in line for line in logs), logs)
+
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)

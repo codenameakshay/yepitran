@@ -2,6 +2,7 @@ import contextlib
 import io
 import os
 import runpy
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -159,16 +160,43 @@ class HostConfigTests(unittest.TestCase):
 
 
 class ConfigureTests(unittest.TestCase):
+    def test_failed_setup_is_logged_but_a_healthy_local_device_continues(self):
+        logs = []
+        d = android.Android(logs.append, Path("/tmp"))
+        d.serial = "emulator-5700"
+        d.emu = Mock()
+        d.emu.poll.return_value = None
+
+        def adb_run(args, **kwargs):
+            if "get-state" in args:
+                return subprocess.CompletedProcess(args, 0, "device\n", "")
+            return subprocess.CompletedProcess(args, 1, "", "unsupported setting")
+
+        with patch.object(android, "run", side_effect=adb_run):
+            d.configure()
+        self.assertTrue(any("unsupported setting" in line for line in logs), logs)
+
+    def test_failed_setup_cannot_hide_a_dead_local_transport(self):
+        d = android.Android(lambda _: None, Path("/tmp"))
+        d.emu = Mock()
+        d.emu.poll.return_value = None
+        with patch.object(android, "run", return_value=subprocess.CompletedProcess([], 1, "", "device offline")):
+            with self.assertRaisesRegex(proc.InfraError, "device setup.*device offline"):
+                d.configure()
+
     def test_a_hanging_setup_command_is_skipped_and_the_rest_still_run(self):
         logs, sent = [], []
 
         def adb_raw(*args, **kwargs):
+            if args[0] == "get-state":
+                return subprocess.CompletedProcess(args, 0, "device\n", "")
             sent.append(args[1])
             if args[1].startswith("cmd bluetooth_manager"):
                 raise android.InfraError("adb shell: no answer after 30s")
+            return subprocess.CompletedProcess(args, 0, "", "")
 
         d = android.Android(logs.append, Path("/tmp"))
-        with patch.object(d, "adb_raw", side_effect=adb_raw):
+        with patch.object(d, "adb_raw", side_effect=adb_raw), patch.object(d, "check_alive"):
             d.configure()
         self.assertEqual(list(android.Android.SETUP), sent)
         self.assertTrue(any("cmd bluetooth_manager disable" in line for line in logs))
