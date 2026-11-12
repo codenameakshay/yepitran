@@ -8,196 +8,535 @@
 <meta property="og:title" content="yepitran: yep, it ran">
 <meta property="og:description" content="Prove your mobile app works on real iOS and Android devices. Video, screenshots, and a verdict you can trust.">
 <meta property="og:image" content="https://yepitran.dev/assets/og.png">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%2316a34a'/><path d='M9 16.5l4.5 4.5L23 11.5' stroke='white' stroke-width='3.2' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#1f3d33">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='9' fill='%231e8a4c'/><path d='M8.5 16.8c2 1.4 3.4 3 4.6 5 2.6-5 5.6-8.6 10.4-11.6' stroke='white' stroke-width='3.4' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Recursive:slnt,wght,CASL,MONO@-15..0,300..1000,0..1,0..1&display=swap" rel="stylesheet">
 <style>
+  /*
+    The page is a desk: a green blotter with paper reports on it, inked with rubber stamps.
+    One family, two voices: Recursive's casual axis for people and verdicts, linear and mono for the machine.
+  */
   :root {
-    --bg: #fbfbf8;
-    --surface: #ffffff;
-    --ink: #16181d;
-    --muted: #5d636f;
-    --line: #e6e5df;
-    --code-bg: #f3f2ec;
-    --green: #16a34a;
-    --green-soft: #e7f6ec;
-    --red: #dc2626;
-    --red-soft: #fdecec;
-    --amber: #b45309;
-    --amber-soft: #fdf3e2;
-    --radius: 14px;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) {
-      --bg: #0f1114; --surface: #171a1f; --ink: #eef0f3; --muted: #9aa1ad; --line: #262a31;
-      --code-bg: #1d2127; --green: #34d399; --green-soft: #12291f; --red: #f87171; --red-soft: #2c1617;
-      --amber: #fbbf24; --amber-soft: #2b2312;
-    }
-  }
-  :root[data-theme="dark"] {
-    --bg: #0f1114; --surface: #171a1f; --ink: #eef0f3; --muted: #9aa1ad; --line: #262a31;
-    --code-bg: #1d2127; --green: #34d399; --green-soft: #12291f; --red: #f87171; --red-soft: #2c1617;
-    --amber: #fbbf24; --amber-soft: #2b2312;
+    --desk: #1f3d33;
+    --on-desk: #eef1ea;
+    --on-desk-muted: #a9bfb3;
+    --desk-rule: rgb(238 241 234 / 0.16);
+    --paper: #fbfbf7;
+    --ink: #1c2541;
+    --ink-muted: #5c6474;
+    --paper-rule: #e3e4dc;
+    --pass: #1e8a4c;
+    --app: #cf3a2f;
+    --infra: #b57a0c;
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+    --ease-icon: cubic-bezier(0.2, 0, 0, 1);
+    --sheet-shadow: 0 0 0 1px rgb(0 0 0 / 0.05), 0 2px 3px rgb(0 0 0 / 0.16), 0 32px 64px -32px rgb(0 0 0 / 0.6);
+    color-scheme: dark;
   }
   * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
   html { -webkit-text-size-adjust: 100%; }
   body {
-    margin: 0; background: var(--bg); color: var(--ink);
-    font: 16px/1.6 Inter, ui-sans-serif, system-ui, -apple-system, sans-serif;
-    -webkit-font-smoothing: antialiased;
+    margin: 0; color: var(--on-desk); background-color: var(--desk);
+    /* a faint grain, so the blotter reads as a material rather than a flat fill */
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.07 0'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23n)'/%3E%3C/svg%3E");
+    font-family: Recursive, ui-sans-serif, system-ui, sans-serif;
+    font-variation-settings: "CASL" 0, "MONO" 0;
+    font-size: 1.0625rem; line-height: 1.6;
+    -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
   }
-  a { color: inherit; }
-  code, pre { font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.875rem; }
-  .wrap { max-width: 1040px; margin: 0 auto; padding: 0 16px; }
-  nav { display: flex; align-items: center; justify-content: space-between; padding: 20px 0; }
-  .logo { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 1.15rem; text-decoration: none; letter-spacing: -0.01em; }
-  .logo svg { width: 28px; height: 28px; }
-  .nav-links { display: flex; gap: 20px; font-size: 0.95rem; color: var(--muted); }
-  .nav-links a { text-decoration: none; }
-  .nav-links a:hover { color: var(--ink); }
+  ::selection { background: #f2df5b; color: var(--ink); }
+  a { color: inherit; text-underline-offset: 0.22em; text-decoration-thickness: 1px; text-decoration-color: var(--desk-rule); transition: text-decoration-color 150ms ease; }
+  @media (hover: hover) and (pointer: fine) { a:hover { text-decoration-color: currentColor; } }
+  :focus-visible { outline: 2px solid #f2df5b; outline-offset: 3px; border-radius: 4px; }
+  code, pre, .mono { font-family: Recursive, ui-monospace, Menlo, monospace; font-variation-settings: "CASL" 0, "MONO" 1; }
+  .wrap { max-width: 1140px; margin: 0 auto; padding: 0 16px; }
+  @media (min-width: 720px) { .wrap { padding: 0 32px; } }
 
-  .hero { padding: 48px 0 32px; display: grid; gap: 40px; grid-template-columns: 1.05fr 0.95fr; align-items: center; }
-  h1 { font-size: clamp(2.6rem, 6vw, 4.2rem); line-height: 1.02; letter-spacing: -0.035em; margin: 0 0 18px; font-weight: 800; text-wrap: balance; }
-  h1 .yep { color: var(--green); }
-  .lede { font-size: 1.15rem; color: var(--muted); margin: 0 0 28px; max-width: 34rem; text-wrap: pretty; }
+  button {
+    font: inherit; font-weight: 650; font-size: 0.9rem; cursor: pointer; border: 0; color: inherit; background: none;
+    min-height: 40px; touch-action: manipulation;
+    transition: transform 160ms var(--ease-out), background-color 150ms ease, color 150ms ease;
+  }
+  button:active { transform: scale(0.96); }
+
+  /* nav */
+  nav { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 20px 0; }
+  .logo { display: inline-flex; align-items: center; gap: 10px; font-weight: 800; font-size: 1.15rem; text-decoration: none; font-variation-settings: "CASL" 1; }
+  .logo svg { width: 28px; height: 28px; flex: none; }
+  .nav-links { display: flex; gap: 4px; }
+  .nav-links a { text-decoration: none; color: var(--on-desk-muted); padding: 8px 10px; border-radius: 8px; transition: color 150ms ease; }
+  @media (hover: hover) and (pointer: fine) { .nav-links a:hover { color: var(--on-desk); } }
+  @media (max-width: 560px) { .nav-links .hide-sm { display: none; } }
+
+  /* page load: the one orchestrated entrance. Headline words rise in order, then the copy, then the report. */
+  h1 .w { display: inline-block; animation: rise 760ms var(--ease-out) both; }
+  h1 .w:nth-child(2) { animation-delay: 80ms; }
+  h1 .w:nth-child(3) { animation-delay: 160ms; }
+  .intro { animation: lift 640ms 260ms var(--ease-out) both; }
+  .sheet { animation: lift 720ms 400ms var(--ease-out) both; }
+  @keyframes rise { from { opacity: 0; transform: translateY(0.3em) rotate(3deg); filter: blur(4px); } }
+  @keyframes lift { from { opacity: 0; transform: translateY(16px); } }
+  @keyframes fade-only { from { opacity: 0; } }
+
+  /* hero copy */
+  h1 {
+    margin: 36px 0 0; font-weight: 900; line-height: 0.9; letter-spacing: -0.035em;
+    font-size: clamp(4.2rem, 15.5vw, 11rem);
+    font-variation-settings: "CASL" 1, "slnt" -6;
+  }
+  .intro { display: grid; grid-template-columns: minmax(0, 1fr); gap: 28px; margin-top: 32px; align-items: end; }
+  .intro > * { min-width: 0; }
+  @media (min-width: 920px) { .intro { grid-template-columns: minmax(0, 1fr) minmax(0, 29rem); gap: 72px; } }
+  .lede { margin: 0; font-size: clamp(1.15rem, 2vw, 1.3rem); line-height: 1.5; max-width: 33rem; text-wrap: pretty; }
+  .lede span { color: var(--on-desk-muted); }
   .install {
-    display: flex; align-items: center; gap: 12px; background: var(--surface); border: 1px solid var(--line);
-    border-radius: 12px; padding: 12px 12px 12px 16px; max-width: 34rem;
+    display: flex; align-items: center; gap: 8px; padding: 4px 4px 4px 16px; border-radius: 12px;
+    background: rgb(0 0 0 / 0.18); box-shadow: inset 0 0 0 1px var(--desk-rule);
   }
-  .install code { flex: 1; overflow-x: auto; white-space: nowrap; }
-  .install code::before { content: "$ "; color: var(--muted); }
-  button.copy {
-    font: 500 0.85rem Inter, sans-serif; border: 1px solid var(--line); background: var(--bg); color: var(--ink);
-    border-radius: 8px; padding: 6px 12px; cursor: pointer; min-height: 32px;
+  .install code { flex: 1; min-width: 0; overflow-x: auto; white-space: nowrap; font-size: 0.85rem; scrollbar-width: none; }
+  .install code::-webkit-scrollbar { display: none; }
+  .install code::before { content: "$ "; color: var(--on-desk-muted); }
+  .copy { position: relative; display: grid; place-items: center; width: 40px; border-radius: 8px; color: var(--on-desk-muted); }
+  @media (hover: hover) and (pointer: fine) { .copy:hover { background: rgb(255 255 255 / 0.08); color: var(--on-desk); } }
+  .copy svg { grid-area: 1 / 1; width: 18px; height: 18px; transition: opacity 200ms var(--ease-icon), transform 200ms var(--ease-icon), filter 200ms var(--ease-icon); }
+  .copy .done-icon, .copy.copied .copy-icon { opacity: 0; transform: scale(0.25); filter: blur(4px); }
+  .copy.copied .done-icon { opacity: 1; transform: none; filter: none; color: #7ee0a4; }
+  .intro .links { display: flex; flex-wrap: wrap; gap: 6px 24px; margin-top: 14px; font-weight: 600; }
+
+  /* the run report sheet */
+  .sheet {
+    position: relative; margin: 56px 0 0; background: var(--paper); color: var(--ink);
+    border-radius: 10px; box-shadow: var(--sheet-shadow); padding: 20px 16px 24px;
   }
-  button.copy:hover { border-color: var(--muted); }
-  button.copy:focus-visible, a:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
-  .cta-row { display: flex; gap: 12px; margin-top: 16px; flex-wrap: wrap; }
-  .btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 10px; font-weight: 600; text-decoration: none; font-size: 0.95rem; }
-  .btn.primary { background: var(--ink); color: var(--bg); }
-  .btn.ghost { border: 1px solid var(--line); }
+  @media (min-width: 720px) { .sheet { padding: 28px 32px 32px; } }
+  .sheet-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 24px; padding-bottom: 16px; border-bottom: 2px solid var(--ink); }
+  .sheet-head h2 { margin: 0; font-size: 1.05rem; font-weight: 700; letter-spacing: 0; }
+  .sheet-head p { margin: 2px 0 0; font-size: 0.9rem; color: var(--ink-muted); }
+  .run-btn { background: var(--ink); color: var(--paper); border-radius: 999px; padding: 0 18px; display: inline-flex; align-items: center; gap: 8px; }
+  @media (hover: hover) and (pointer: fine) { .run-btn:hover { background: #2a3760; } }
+  .run-btn svg { width: 14px; height: 14px; margin-left: -2px; }
+  .sheet-body { display: grid; gap: 28px; padding-top: 20px; }
+  @media (min-width: 920px) { .sheet-body { grid-template-columns: minmax(0, 1fr) auto; gap: 48px; } }
 
-  .devices { display: flex; gap: 14px; justify-content: center; }
-  .phone {
-    flex: 1; max-width: 220px; aspect-ratio: 9 / 19.5; border-radius: 30px; overflow: hidden;
-    background: #000; border: 6px solid #1b1d22; box-shadow: 0 24px 50px -20px rgba(0,0,0,0.35);
-    position: relative;
+  .log { list-style: none; margin: 0; padding: 0; font-size: 0.875rem; line-height: 1.35; }
+  .log li { display: grid; grid-template-columns: minmax(0, 1fr) 3.6rem 4.4rem; gap: 8px; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--paper-rule); }
+  .log li.cols { color: var(--ink-muted); font-size: 0.8rem; padding: 0 0 6px; }
+  .log li.cols span, .tick { justify-self: center; }
+  .log code { overflow-wrap: anywhere; }
+  .log .k { font-weight: 700; }
+  .log .s { color: var(--ink-muted); }
+  .tick { width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; box-shadow: inset 0 0 0 1.5px var(--paper-rule); transition: background-color 160ms ease, box-shadow 160ms ease; }
+  .tick svg { width: 12px; height: 12px; opacity: 0; transform: scale(0.25); filter: blur(4px); transition: opacity 200ms var(--ease-icon), transform 200ms var(--ease-icon), filter 200ms var(--ease-icon); }
+  .tick.done { background: var(--pass); box-shadow: none; }
+  .tick.done svg { opacity: 1; transform: none; filter: none; }
+
+  .verdict-row { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 132px; padding-top: 16px; }
+  .verdict-row > span { font-weight: 700; }
+  .status { color: var(--ink-muted); font-size: 0.9rem; font-variant-numeric: tabular-nums; text-align: right; }
+  .verdict-row .stamp { position: absolute; right: 8px; top: 8px; padding: 10px 24px 11px; }
+  .verdict-row .stamp b { font-size: clamp(2.6rem, 6vw, 3.6rem); }
+  .verdict-row .stamp small { font-size: 0.8rem; }
+  @media (max-width: 520px) { .verdict-row .stamp { right: 0; } .verdict-row .stamp small { font-size: 0.7rem; } }
+
+  .devices { display: flex; gap: 16px; justify-content: center; }
+  @media (max-width: 919px) { .devices { order: -1; } }
+  figure { margin: 0; text-align: center; }
+  .phone { width: min(216px, 40vw); aspect-ratio: 9 / 19.5; border-radius: 30px; padding: 6px; background: #12161f; }
+  .phone video { width: 100%; height: 100%; object-fit: cover; display: block; border-radius: 24px; background: #f6f2fa; }
+  figcaption { margin-top: 10px; font-size: 0.85rem; color: var(--ink-muted); }
+  @media (max-width: 520px) { .phone { border-radius: 22px; padding: 4px; } .phone video { border-radius: 18px; } }
+
+  /* rubber stamps: one shape, inked in the verdict's color */
+  .stamp {
+    --tilt: -7deg;
+    display: inline-flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 18px 9px;
+    border: 4px solid currentColor; border-radius: 10px; outline: 1.5px solid currentColor; outline-offset: -9px;
+    transform: rotate(var(--tilt)); mix-blend-mode: multiply; filter: url(#ink); opacity: 0;
+    transition: opacity 150ms ease-out;
+    font-variation-settings: "CASL" 1; white-space: nowrap; user-select: none;
   }
-  .phone img, .phone video { width: 100%; height: 100%; object-fit: cover; display: block; }
-  .phone .tag {
-    position: absolute; left: 10px; bottom: 10px; display: inline-flex; align-items: center; gap: 6px;
-    background: rgba(22,163,74,0.95); color: #fff; font-size: 0.75rem; font-weight: 700;
-    padding: 4px 10px 4px 8px; border-radius: 999px; letter-spacing: 0.02em;
+  .stamp.shown { opacity: 0.92; }
+  .stamp b { font-size: 2.6rem; font-weight: 900; line-height: 1; letter-spacing: 0.01em; padding: 6px 4px 0; }
+  .stamp small { font-size: 0.75rem; font-weight: 700; padding-bottom: 4px; }
+  .stamp.pass { color: var(--pass); } .stamp.app { color: var(--app); } .stamp.infra { color: var(--infra); }
+
+  /* sections on the desk */
+  section { margin-top: 128px; }
+  h2.big { font-size: clamp(2rem, 4.6vw, 3rem); line-height: 1.06; letter-spacing: -0.03em; font-weight: 800; margin: 0 0 16px; max-width: 18ch; text-wrap: balance; }
+  .sub { margin: 0; color: var(--on-desk-muted); max-width: 36rem; text-wrap: pretty; }
+  .split { display: grid; grid-template-columns: minmax(0, 1fr); gap: 36px; }
+  @media (min-width: 920px) { .split { grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr); gap: 64px; align-items: start; } }
+
+  /* verdict explainer */
+  .choices { display: grid; gap: 8px; margin-top: 28px; }
+  .choices button {
+    text-align: left; padding: 10px 14px; border-radius: 10px; color: var(--on-desk);
+    box-shadow: inset 0 0 0 1px var(--desk-rule); font-weight: 600; font-size: 0.95rem;
   }
-  .caption { text-align: center; color: var(--muted); font-size: 0.85rem; margin-top: 12px; }
+  @media (hover: hover) and (pointer: fine) { .choices button:hover { background: rgb(255 255 255 / 0.06); } }
+  .choices button[aria-pressed="true"] { background: var(--on-desk); color: var(--ink); box-shadow: none; }
+  .slip { position: relative; background: var(--paper); color: var(--ink); border-radius: 8px; box-shadow: var(--sheet-shadow); padding: 20px 20px 24px; min-height: 380px; }
+  @media (min-width: 720px) { .slip { padding: 28px 28px 28px; } }
+  .slip h3 { margin: 0 0 4px; font-size: 1rem; font-weight: 700; }
+  .slip > p { margin: 0 0 16px; color: var(--ink-muted); font-size: 0.9rem; padding-bottom: 14px; border-bottom: 2px solid var(--ink); }
+  .attempts { list-style: none; margin: 0; padding: 0; }
+  .attempts li { display: grid; grid-template-columns: 14px minmax(0, 1fr); gap: 4px 12px; padding: 12px 0; border-bottom: 1px solid var(--paper-rule); }
+  .attempts .dot { width: 10px; height: 10px; border-radius: 50%; margin-top: 7px; background: var(--pass); }
+  .attempts .dot.app { background: var(--app); } .attempts .dot.infra { background: var(--infra); }
+  .attempts b { font-weight: 700; display: block; }
+  .attempts span { color: var(--ink-muted); font-size: 0.95rem; }
+  .slip-verdict { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 20px; padding-top: 20px; }
+  .slip-verdict p { margin: 0; max-width: 20rem; font-size: 0.95rem; text-wrap: pretty; }
 
-  section { padding: 56px 0; border-top: 1px solid var(--line); }
-  h2 { font-size: clamp(1.6rem, 3.5vw, 2.1rem); letter-spacing: -0.025em; margin: 0 0 10px; line-height: 1.15; }
-  .sub { color: var(--muted); margin: 0 0 28px; max-width: 42rem; }
+  /* the problem, told as a pull request */
+  .problems { list-style: none; margin: 28px 0 0; padding: 0; display: grid; gap: 20px; }
+  .problems li { display: grid; grid-template-columns: 24px minmax(0, 1fr); gap: 14px; }
+  .problems svg { width: 22px; height: 22px; margin-top: 3px; color: #f08a7e; }
+  .problems b { display: block; font-weight: 700; }
+  .problems span { color: var(--on-desk-muted); }
+  .answer { margin: 32px 0 0; padding-left: 16px; border-left: 3px solid #7ee0a4; font-size: 1.15rem; max-width: 30rem; text-wrap: pretty; }
+  .slip-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 14px; border-bottom: 2px solid var(--ink); margin-bottom: 4px; }
+  .slip-head h3 { margin: 0; font-size: 1rem; font-weight: 700; }
+  .slip-head p { margin: 2px 0 0; font-size: 0.9rem; color: var(--ink-muted); }
+  .ghost-btn { color: var(--ink); border-radius: 999px; padding: 0 14px; box-shadow: inset 0 0 0 1px var(--paper-rule); flex: none; }
+  @media (hover: hover) and (pointer: fine) { .ghost-btn:hover { background: #eef0e8; } }
+  .msg { display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--paper-rule); }
+  .msg:last-child { border-bottom: 0; padding-bottom: 0; }
+  .avatar { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-weight: 800; font-size: 0.8rem; font-variation-settings: "CASL" 1; }
+  .avatar.agent { background: #5b4fc4; } .avatar.rev { background: #b5602a; } .avatar.bot { background: var(--pass); }
+  .avatar svg { width: 20px; height: 20px; }
+  .msg b { font-size: 0.9rem; font-weight: 700; }
+  .msg p { margin: 2px 0 0; text-wrap: pretty; }
+  .running { margin-top: 4px; color: var(--ink-muted); font-size: 0.95rem; }
+  .bar { height: 4px; max-width: 260px; margin-top: 10px; border-radius: 2px; background: var(--paper-rule); overflow: hidden; }
+  .bar i { display: block; height: 100%; background: var(--pass); transform-origin: left; transform: scaleX(0); }
+  .result { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px; margin-top: 10px; }
+  .result img { width: 54px; height: 112px; object-fit: cover; object-position: top; border-radius: 8px; outline: 1px solid oklch(0 0 0 / 0.1); outline-offset: -1px; }
+  .result .stamp { margin-left: 10px; padding: 6px 14px 7px; }
+  .result .stamp b { font-size: 1.9rem; }
+  .result p { flex-basis: 100%; color: var(--ink-muted); font-size: 0.9rem; }
 
-  .verdicts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
-  .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px; }
-  .pill { display: inline-block; font: 700 0.8rem "JetBrains Mono", monospace; padding: 4px 10px; border-radius: 999px; margin-bottom: 10px; }
-  .pill.pass { background: var(--green-soft); color: var(--green); }
-  .pill.app { background: var(--red-soft); color: var(--red); }
-  .pill.infra { background: var(--amber-soft); color: var(--amber); }
-  .card p { margin: 0; color: var(--muted); font-size: 0.95rem; }
-  .card strong { color: var(--ink); }
+  /* who it's for */
+  .audience { display: grid; grid-template-columns: minmax(0, 1fr); gap: 32px; margin-top: 44px; }
+  @media (min-width: 820px) { .audience { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 40px; } }
+  .audience > div { padding-top: 20px; border-top: 2px solid var(--on-desk); }
+  .audience svg { width: 28px; height: 28px; color: #7ee0a4; }
+  .audience h3 { margin: 12px 0 6px; font-size: 1.3rem; font-weight: 750; letter-spacing: -0.01em; }
+  .audience p { margin: 0; color: var(--on-desk-muted); text-wrap: pretty; }
+  .works-with { margin: 36px 0 0; color: var(--on-desk-muted); max-width: 44rem; }
+  .works-with strong { color: var(--on-desk); font-weight: 650; }
 
-  .split { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; align-items: start; }
-  .hero > *, .split > * { min-width: 0; }  /* let long code lines scroll instead of widening the page */
-  pre {
-    margin: 0; background: var(--code-bg); border: 1px solid var(--line); border-radius: var(--radius);
-    padding: 18px 20px; overflow-x: auto; line-height: 1.65;
+  /* how it works: a rail fills step by step, each step's drawing plays as the rail reaches it */
+  .pipeline { position: relative; margin-top: 48px; }
+  .pipe-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 40px; }
+  @media (min-width: 900px) { .pipe-steps { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 28px; } }
+  .rail { position: absolute; left: 11px; top: 12px; bottom: 12px; width: 2px; background: var(--desk-rule); }
+  .rail i { position: absolute; inset: 0; background: #7ee0a4; transform-origin: top; transform: scaleY(0); transition: transform 1700ms var(--ease-in-out); }
+  @media (min-width: 900px) {
+    .rail { left: 12px; right: 12px; top: 11px; bottom: auto; width: auto; height: 2px; }
+    .rail i { transform-origin: left; transform: scaleX(0); }
   }
-  .k { color: var(--green); font-weight: 500; }
-  .s { color: var(--amber); }
-  .c { color: var(--muted); }
-  ul.points { margin: 0; padding: 0; list-style: none; display: grid; gap: 14px; }
-  ul.points li { display: grid; grid-template-columns: 22px 1fr; gap: 10px; }
-  ul.points li::before {
-    content: ""; width: 18px; height: 18px; margin-top: 4px; border-radius: 50%; background: var(--green-soft);
-    box-shadow: inset 0 0 0 5px var(--green-soft), inset 0 0 0 9px var(--green);
+  .pipeline.in .rail i { transform: none; }
+  .pipeline li { --at: calc(var(--i) * 450ms); position: relative; padding-left: 44px; }
+  @media (min-width: 900px) { .pipeline li { padding: 44px 0 0; } }
+  .node {
+    position: absolute; left: 0; top: 0; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center;
+    background: var(--desk); box-shadow: inset 0 0 0 2px var(--desk-rule); color: var(--on-desk-muted);
+    font-size: 0.75rem; font-weight: 800; font-variant-numeric: tabular-nums;
+    transition: background-color 200ms ease, color 200ms ease, box-shadow 200ms ease; transition-delay: var(--at);
   }
-  ul.points b { display: block; }
-  ul.points span { color: var(--muted); font-size: 0.95rem; }
-
-  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 28px; }
-  .stat { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px 20px; }
-  .stat b { display: block; font-size: 1.6rem; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
-  .stat span { color: var(--muted); font-size: 0.9rem; }
-
-  footer { padding: 40px 0 56px; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.9rem; display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
-
-  @media (max-width: 820px) {
-    .hero, .split { grid-template-columns: 1fr; }
-    .hero { padding-top: 24px; }
-    .verdicts, .stats { grid-template-columns: 1fr; }
-    .nav-links a.hide-sm { display: none; }
-    .phone { border-radius: 24px; border-width: 5px; }
+  .pipeline.in .node { background: #7ee0a4; color: var(--desk); box-shadow: none; }
+  .pipeline h3 { margin: 0 0 6px; font-size: 1.15rem; font-weight: 750; }
+  .pipeline p { margin: 0; color: var(--on-desk-muted); font-size: 0.98rem; text-wrap: pretty; }
+  .art {
+    height: 136px; margin-bottom: 18px; border-radius: 8px; background: var(--paper); color: var(--ink); box-shadow: var(--sheet-shadow);
+    display: flex; align-items: center; justify-content: center; gap: 14px; overflow: hidden;
+    opacity: 0; transform: translateY(10px); transition: opacity 500ms var(--ease-out), transform 500ms var(--ease-out); transition-delay: var(--at);
   }
-  @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+  .pipeline.in .art { opacity: 1; transform: none; }
+  /* 1: the scenario types itself out */
+  .art-script code { display: grid; gap: 7px; justify-items: start; font-size: 0.8rem; }
+  .art-script span { clip-path: inset(0 100% 0 0); transition: clip-path 650ms steps(18, end); transition-delay: calc(var(--at) + 300ms + var(--d) * 420ms); }
+  .pipeline.in .art-script span { clip-path: inset(0 0 0 0); }
+  .art-script .k { font-weight: 700; } .art-script .s { color: #3d5a99; }
+  /* 2: two clean devices boot */
+  .mini-phone { position: relative; width: 46px; height: 92px; border-radius: 10px; border: 3px solid #12161f; background: #12161f; overflow: hidden; }
+  .mini-phone .scr {
+    position: absolute; inset: 0; border-radius: 6px; opacity: 0; transition: opacity 400ms ease-out;
+    background: linear-gradient(#5b4fc4 0 0) 6px 10px / 20px 3px no-repeat, linear-gradient(#cfd2dc 0 0) 6px 22px / 26px 3px no-repeat,
+                linear-gradient(#cfd2dc 0 0) 6px 31px / 22px 3px no-repeat, linear-gradient(#cfd2dc 0 0) 6px 40px / 24px 3px no-repeat, #f6f2fa;
+  }
+  .mini-phone .boot { position: absolute; left: 9px; right: 9px; top: 50%; height: 3px; border-radius: 2px; background: #fff; transform-origin: left; transform: scaleX(0); transition: transform 700ms linear; }
+  .art-boot .mini-phone:nth-child(2) { --lag: 150ms; }
+  .art-boot .boot { transition-delay: calc(var(--at) + 350ms + var(--lag, 0ms)); }
+  .art-boot .scr { transition-delay: calc(var(--at) + 1100ms + var(--lag, 0ms)); }
+  .pipeline.in .art-boot .boot { transform: none; }
+  .pipeline.in .art-boot .scr, .art-rec .scr { opacity: 1; }
+  /* 3: taps land while it records */
+  .art-rec .tap { position: absolute; left: 50%; top: 58%; width: 22px; height: 22px; margin: -11px 0 0 -11px; border-radius: 50%; background: rgb(91 79 196 / 0.45); opacity: 0; }
+  .pipeline.in .art-rec .tap { animation: tap 900ms var(--ease-out) calc(var(--at) + 600ms) 3; }
+  @keyframes tap { from { opacity: 1; transform: scale(0.4); } to { opacity: 0; transform: scale(1.7); } }
+  .rec { display: inline-flex; align-items: center; gap: 6px; font-size: 0.85rem; font-weight: 650; }
+  .rec i { width: 9px; height: 9px; border-radius: 50%; background: var(--app); }
+  .pipeline.in .rec i { animation: blink 1s steps(2, jump-none) calc(var(--at) + 400ms) 4; }
+  @keyframes blink { 50% { opacity: 0.15; } }
+  /* 4: the verdict is stamped, the report is ready */
+  .art-verdict { flex-direction: column; gap: 10px; }
+  .art-verdict .stamp { --tilt: -6deg; padding: 4px 12px 5px; transform: rotate(var(--tilt)) scale(1.5); transition: opacity 180ms ease-out, transform 340ms var(--ease-out); transition-delay: calc(var(--at) + 450ms); }
+  .art-verdict .stamp b { font-size: 1.7rem; }
+  .pipeline.in .art-verdict .stamp { opacity: 0.92; transform: rotate(var(--tilt)); }
+  .files { font-size: 0.72rem; color: var(--ink-muted); text-align: center; padding: 0 12px; text-wrap: balance; }
+
+  /* script + CI */
+  .points { list-style: none; margin: 28px 0 0; padding: 0; display: grid; gap: 18px; }
+  .points li { padding-left: 18px; border-left: 2px solid var(--desk-rule); }
+  .points b { display: block; font-weight: 700; }
+  .points span { color: var(--on-desk-muted); }
+  pre.slip { margin: 0; min-height: 0; overflow-x: auto; font-size: 0.875rem; line-height: 1.75; }
+  pre .c { color: var(--ink-muted); }
+  pre .k { font-weight: 700; }
+  pre .s { color: #3d5a99; }
+  .note { margin: 16px 0 0; color: var(--on-desk-muted); font-size: 0.95rem; }
+
+  footer { margin-top: 136px; padding: 28px 0 48px; border-top: 1px solid var(--desk-rule); display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px 24px; color: var(--on-desk-muted); font-size: 0.95rem; }
+  footer b { color: var(--on-desk); font-weight: 800; font-variation-settings: "CASL" 1, "slnt" -6; }
+
+  @media (prefers-reduced-motion: reduce) {
+    button:active { transform: none; }
+    .tick svg, .copy svg { transform: none !important; filter: none !important; }
+    h1 .w, .intro, .sheet { animation-name: fade-only; }
+    .pipeline *, .pipeline *::before { transition-duration: 0ms !important; transition-delay: 0ms !important; animation: none !important; }
+  }
 </style>
 </head>
 <body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <!-- rubber-stamp ink: speckled coverage and slightly uneven edges -->
+  <filter id="ink" x="-5%" y="-5%" width="110%" height="110%">
+    <feTurbulence type="fractalNoise" baseFrequency="1.1" numOctaves="2" seed="4" result="grain"/>
+    <feColorMatrix in="grain" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -2.4 2.1" result="speck"/>
+    <feComposite in="SourceGraphic" in2="speck" operator="in" result="inked"/>
+    <feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="2" seed="9" result="wobble"/>
+    <feDisplacementMap in="inked" in2="wobble" scale="2.5" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+  <symbol id="check" viewBox="0 0 12 12"><path d="M2.4 6.4c.9.6 1.6 1.4 2.1 2.3C5.7 6.3 7.2 4.5 9.6 3" stroke="#fff" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+</svg>
+
 <div class="wrap">
   <nav>
     <a class="logo" href="#" aria-label="yepitran home">
-      <svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="var(--green)"/><path d="M9 16.5l4.5 4.5L23 11.5" stroke="#fff" stroke-width="3.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="9" fill="var(--pass)"/><path d="M8.5 16.8c2 1.4 3.4 3 4.6 5 2.6-5 5.6-8.6 10.4-11.6" stroke="#fff" stroke-width="3.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
       yepitran
     </a>
     <div class="nav-links">
       <a class="hide-sm" href="#how">How it works</a>
-      <a class="hide-sm" href="#ci">GitHub Action</a>
+      <a href="https://github.com/codenameakshay/yepitran#readme">Docs</a>
       <a href="https://github.com/codenameakshay/yepitran">GitHub</a>
     </div>
   </nav>
 
-  <header class="hero">
-    <div>
-      <h1><span class="yep">Yep,</span> it ran.<br>On real devices.</h1>
-      <p class="lede">yepitran runs your mobile app on a real iOS Simulator and Android Emulator, follows a short script, and hands back a video, screenshots and a verdict you can trust. It never blames your app for a flaky device.</p>
-      <div class="install">
-        <code id="cmd">pipx install git+https://github.com/codenameakshay/yepitran</code>
-        <button class="copy" data-copy="cmd" type="button">Copy</button>
-      </div>
-      <div class="cta-row">
-        <a class="btn primary" href="https://github.com/codenameakshay/yepitran#try-it-in-5-minutes">Try the demo</a>
-        <a class="btn ghost" href="https://github.com/codenameakshay/yepitran">Read the docs</a>
+  <header>
+    <h1 aria-label="Yep, it ran."><span class="w" aria-hidden="true">Yep,</span> <span class="w" aria-hidden="true">it</span> <span class="w" aria-hidden="true">ran.</span></h1>
+    <div class="intro">
+      <p class="lede">yepitran proves your mobile app works. It runs a short test on a real iOS Simulator and Android Emulator, records a video, and gives one verdict that you, your reviewers and your coding agent can trust. <span>Free and open source.</span></p>
+      <div>
+        <div class="install">
+          <code id="cmd">pipx install git+https://github.com/codenameakshay/yepitran</code>
+          <button class="copy" type="button" data-copy="cmd" aria-label="Copy install command">
+            <svg class="copy-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8.5" y="8.5" width="11" height="11" rx="2.5"/><path d="M15.5 8.5V6.5a2 2 0 0 0-2-2h-7a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h2"/></svg>
+            <svg class="done-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
+          </button>
+        </div>
+        <div class="links">
+          <a href="https://github.com/codenameakshay/yepitran#try-it-in-5-minutes">Try the demo app</a>
+          <a href="#ci">Add it to GitHub CI</a>
+        </div>
       </div>
     </div>
-    <div>
-      <div class="devices">
-        <div class="phone"><video src="assets/ios.mp4" poster="assets/ios.png" autoplay muted loop playsinline aria-label="yepitran running the demo on an iOS Simulator"></video><span class="tag">iOS · PASS</span></div>
-        <div class="phone"><video src="assets/android.mp4" poster="assets/android.png" autoplay muted loop playsinline aria-label="yepitran running the demo on an Android Emulator"></video><span class="tag">Android · PASS</span></div>
+
+    <article class="sheet" id="run" aria-labelledby="run-title">
+      <div class="sheet-head">
+        <div>
+          <h2 id="run-title"><span class="mono">demo.proof</span> on iOS and Android</h2>
+          <p>A real run of the demo app, recorded by yepitran.</p>
+        </div>
+        <button class="run-btn" type="button" id="run-btn">
+          <svg viewBox="0 0 14 14" aria-hidden="true"><path d="M4 2.6v8.8c0 .5.5.8.9.5l6.6-4.4a.6.6 0 0 0 0-1L4.9 2.1c-.4-.3-.9 0-.9.5z" fill="currentColor"/></svg>
+          <span>Run it again</span>
+        </button>
       </div>
-      <p class="caption">The demo scenario, recorded by yepitran on both platforms.</p>
-    </div>
+      <div class="sheet-body">
+        <div>
+          <ol class="log" aria-label="Scenario steps">
+            <li class="cols" aria-hidden="true"><span></span><span>iOS</span><span>Android</span></li>
+            <li data-ios="0" data-android="0"><code><span class="k">launch</span></code></li>
+            <li data-ios="0.4" data-android="0.4"><code><span class="k">wait</span> <span class="s">"Yep Todo"</span></code></li>
+            <li data-ios="0.8" data-android="0.8"><code><span class="k">assert visible</span> <span class="s">"Buy milk"</span></code></li>
+            <li data-ios="1.2" data-android="1.4"><code><span class="k">screenshot</span> home</code></li>
+            <li data-ios="2" data-android="8.5"><code><span class="k">tap</span> <span class="s">"Walk the dog"</span></code></li>
+            <li data-ios="2.5" data-android="9"><code><span class="k">assert visible</span> <span class="s">"1 of 3 done"</span></code></li>
+            <li data-ios="5.8" data-android="11.2"><code><span class="k">tap</span> <span class="s">"Add task"</span></code></li>
+            <li data-ios="6.2" data-android="11.6"><code><span class="k">wait</span> <span class="s">"New task"</span></code></li>
+            <li data-ios="13.5" data-android="15"><code><span class="k">type</span> <span class="s">"Try yepitran"</span> <span class="k">into</span> <span class="s">"Task title"</span></code></li>
+            <li data-ios="15.6" data-android="17.8"><code><span class="k">tap</span> <span class="s">"Save"</span></code></li>
+            <li data-ios="16" data-android="18.5"><code><span class="k">assert gone</span> <span class="s">"New task"</span></code></li>
+            <li data-ios="16.3" data-android="18.8"><code><span class="k">assert visible</span> <span class="s">"Try yepitran"</span></code></li>
+            <li data-ios="16.6" data-android="19.1"><code><span class="k">assert visible</span> <span class="s">"1 of 4 done"</span></code></li>
+            <li data-ios="17" data-android="19.5"><code><span class="k">screenshot</span> task-added</code></li>
+          </ol>
+          <div class="verdict-row">
+            <span>Verdict</span>
+            <span class="status" id="status" aria-live="polite"></span>
+            <div class="stamp pass shown" id="hero-stamp" role="img" aria-label="Verdict: PASS, 14 of 14 steps on iOS and Android">
+              <b>PASS</b><small>14 of 14 steps, iOS and Android</small>
+            </div>
+          </div>
+        </div>
+        <div class="devices">
+          <figure>
+            <div class="phone"><video data-col="ios" src="assets/ios.mp4" poster="assets/ios-end.png" muted playsinline preload="auto" aria-label="Recording of the demo on an iOS Simulator"></video></div>
+            <figcaption>iOS Simulator</figcaption>
+          </figure>
+          <figure>
+            <div class="phone"><video data-col="android" src="assets/android.mp4" poster="assets/android-end.png" muted playsinline preload="auto" aria-label="Recording of the demo on an Android Emulator"></video></div>
+            <figcaption>Android Emulator</figcaption>
+          </figure>
+        </div>
+      </div>
+    </article>
   </header>
 
-  <section id="how">
-    <h2>One verdict. No guessing.</h2>
-    <p class="sub">Every attempt starts on a cleanly booted device. A failure counts against your app only when it happens again on a fresh one.</p>
-    <div class="verdicts">
-      <div class="card"><span class="pill pass">PASS</span><p><strong>Every step passed on a real device.</strong> Share the video and screenshots with your reviewer.</p></div>
-      <div class="card"><span class="pill app">APP FAIL</span><p><strong>Your app did the wrong thing, twice,</strong> on two clean devices. The report shows exactly what was on screen.</p></div>
-      <div class="card"><span class="pill infra">INFRA FAIL</span><p><strong>The device or tooling broke.</strong> This says nothing about your app, and the report says what yepitran tried.</p></div>
+  <section id="problem">
+    <div class="split">
+      <div>
+        <h2 class="big">“Tests pass” doesn’t mean the app works</h2>
+        <p class="sub">A mobile change only proves itself on a phone, and most pull requests never get that far.</p>
+        <ul class="problems">
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5M12 16.5v.01"/></svg><div><b>Reviewers can't see the screen.</b><span>A diff doesn't show whether the button still works, or whether a sheet now covers it.</span></div></li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5M12 16.5v.01"/></svg><div><b>Coding agents say “done” without opening the app.</b><span>They change screens they have never seen, and unit tests can't tell.</span></div></li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5M12 16.5v.01"/></svg><div><b>UI tests cry wolf.</b><span>When an emulator hangs, most tools report a failed test, and people learn to ignore red builds.</span></div></li>
+        </ul>
+        <p class="answer">yepitran opens the app on real simulators and emulators, does what a person would do, and posts the proof where the review happens.</p>
+      </div>
+      <div class="slip" id="thread">
+        <div class="slip-head">
+          <div><h3>Fix: new tasks don't save</h3><p>Pull request #128</p></div>
+          <button class="ghost-btn" type="button" id="thread-replay">Replay</button>
+        </div>
+        <div class="msg"><span class="avatar agent" aria-hidden="true">AI</span><div><b>coding agent</b><p>Fixed the bug where new tasks didn't save. All 212 tests pass, ready for review.</p></div></div>
+        <div class="msg"><span class="avatar rev" aria-hidden="true">R</span><div><b>reviewer</b><p>Did anyone open the app? This screen broke on Android last week.</p></div></div>
+        <div class="msg"><span class="avatar bot" aria-hidden="true"><svg viewBox="0 0 20 20" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 10.6c1.3.9 2.2 1.9 3 3.2C9.7 10.6 11.6 8.3 14.7 6.4"/></svg></span><div><b>yepitran</b>
+          <div class="running" hidden><p>Running <code>add-task.proof</code> on an iPhone simulator and an Android emulator&hellip;</p><div class="bar"><i></i></div></div>
+          <div class="result">
+            <img src="assets/ios-end.png" alt="Last frame on iOS: the new task is in the list" width="54" height="112" loading="lazy">
+            <img src="assets/android-end.png" alt="Last frame on Android: the new task is in the list" width="54" height="112" loading="lazy">
+            <div class="stamp pass shown" style="--tilt: -6deg" role="img" aria-label="Verdict: PASS, 14 of 14 steps"><b>PASS</b><small>14 of 14 steps</small></div>
+            <p>Passed on both platforms. Video and screenshots are attached to the run.</p>
+          </div>
+        </div></div>
+      </div>
     </div>
   </section>
 
-  <section>
+  <section id="who">
+    <h2 class="big">Made for people who ship mobile apps</h2>
+    <div class="audience">
+      <div>
+        <svg viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 8l-6 6 6 6M18 8l6 6-6 6"/></svg>
+        <h3>Mobile developers</h3>
+        <p>Check a fix on iOS and Android with one command before you ask for review. No test code goes into your app.</p>
+      </div>
+      <div>
+        <svg viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 14s4-7.5 11-7.5S25 14 25 14s-4 7.5-11 7.5S3 14 3 14z"/><circle cx="14" cy="14" r="3.5"/></svg>
+        <h3>Reviewers and teams</h3>
+        <p>Watch the change work in a video on the pull request, instead of checking out the branch and booting a simulator yourself.</p>
+      </div>
+      <div>
+        <svg viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5.5" width="21" height="17" rx="3"/><path d="M8.5 11.5l3 2.5-3 2.5M14 17h5"/></svg>
+        <h3>Coding agents</h3>
+        <p>Claude Code, Codex and similar agents write the scenario, run it, and read a verdict they can act on: an exit code and <code>verdict.json</code>.</p>
+      </div>
+    </div>
+    <p class="works-with"><strong>Works with</strong> any iOS Simulator build (<code>.app</code>) and any Android <code>.apk</code>. Point it at a Flutter project and it builds both for you. Runs on macOS, on Linux for Android, and in GitHub Actions.</p>
+  </section>
+
+  <section id="how">
+    <h2 class="big">How it works</h2>
+    <p class="sub">Four steps, the same every time, so a result means the same thing on your laptop and in CI.</p>
+    <div class="pipeline" data-reveal>
+      <span class="rail" aria-hidden="true"><i></i></span>
+      <ol class="pipe-steps">
+      <li style="--i: 0">
+        <span class="node" aria-hidden="true">1</span>
+        <div class="art art-script" aria-hidden="true"><code><span style="--d: 0"><span class="k">tap</span> <span class="s">"Add task"</span></span><span style="--d: 1"><span class="k">type</span> <span class="s">"Milk"</span> <span class="k">into</span> <span class="s">"Title"</span></span><span style="--d: 2"><span class="k">assert visible</span> <span class="s">"Milk"</span></span></code></div>
+        <h3>You write the steps</h3>
+        <p>A short scenario in plain words: what a person taps, types and expects to see. Your agent can write it for you.</p>
+      </li>
+      <li style="--i: 1">
+        <span class="node" aria-hidden="true">2</span>
+        <div class="art art-boot" aria-hidden="true"><div class="mini-phone"><i class="boot"></i><i class="scr"></i></div><div class="mini-phone"><i class="boot"></i><i class="scr"></i></div></div>
+        <h3>It boots clean devices</h3>
+        <p>Its own iPhone simulator and Android emulator, freshly booted, with your app newly installed. It never touches another session's device.</p>
+      </li>
+      <li style="--i: 2">
+        <span class="node" aria-hidden="true">3</span>
+        <div class="art art-rec" aria-hidden="true"><div class="mini-phone"><i class="scr"></i><i class="tap"></i></div><span class="rec"><i></i>Recording</span></div>
+        <h3>It follows the script and records</h3>
+        <p>Every tap, every typed word read back, every check. The whole run is on video, with screenshots where you asked.</p>
+      </li>
+      <li style="--i: 3">
+        <span class="node" aria-hidden="true">4</span>
+        <div class="art art-verdict" aria-hidden="true"><div class="stamp pass"><b>PASS</b></div><span class="files mono">video.mp4 &nbsp;report.html &nbsp;verdict.json</span></div>
+        <h3>You get one verdict</h3>
+        <p>PASS, APP FAIL or INFRA FAIL, with a report folder. If the device broke, it retries on a fresh one before it blames your app.</p>
+      </li>
+    </ol>
+    </div>
+  </section>
+
+  <section id="verdicts">
     <div class="split">
       <div>
-        <h2>A script anyone can read</h2>
-        <p class="sub">One step per line, matched against what the user actually sees. Your coding agent can write it from a PR description.</p>
+        <h2 class="big">A flaky emulator is never your app's fault</h2>
+        <p class="sub">Every attempt starts on a cleanly booted device. A failure counts against your app only when it happens again on a fresh one. Pick what goes wrong and see what yepitran decides.</p>
+        <div class="choices" id="choices">
+          <button type="button" data-scenario="works" aria-pressed="false">Your app works</button>
+          <button type="button" data-scenario="hiccup" aria-pressed="true">The emulator hiccups once</button>
+          <button type="button" data-scenario="bug" aria-pressed="false">Your app has a bug</button>
+          <button type="button" data-scenario="broken" aria-pressed="false">The emulator keeps crashing</button>
+        </div>
+      </div>
+      <div class="slip" aria-live="polite">
+        <h3>Run report</h3>
+        <p id="slip-title">Android, demo.proof</p>
+        <ol class="attempts" id="attempts">
+          <li><i class="dot infra"></i><div><b>Attempt 1, freshly booted emulator</b><span>The emulator stopped responding at step 9.</span></div></li>
+          <li><i class="dot"></i><div><b>Attempt 2, after a cold boot</b><span>All 14 steps passed.</span></div></li>
+        </ol>
+        <div class="slip-verdict">
+          <p id="slip-note">The hiccup is in the report. Your app isn't blamed for it.</p>
+          <div class="stamp pass shown" id="slip-stamp" style="--tilt: -5deg" role="img" aria-label="Verdict: PASS, exit code 0"><b>PASS</b><small class="mono">exit 0</small></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="script">
+    <div class="split">
+      <div>
+        <h2 class="big">Write the test the way you'd say it</h2>
+        <p class="sub">One step per line, matched against what a person sees on the screen. Nothing to add to your app, and no selectors to keep up to date.</p>
         <ul class="points">
-          <li><div><b>Taps that land</b><span>It taps the part of a button that nothing else covers, so sheets and overlays don't steal the tap.</span></div></li>
-          <li><div><b>Typing that sticks</b><span>Text is read back after every entry, so autocorrect can't quietly change it.</span></div></li>
-          <li><div><b>Its own devices</b><span>yepitran uses only its own simulator and emulator, so it never touches another session's device.</span></div></li>
+          <li><b>Taps land where a finger would.</b><span>yepitran taps the part of a button that nothing else covers, so sheets and overlays can't steal the tap.</span></li>
+          <li><b>Typing is read back.</b><span>After every entry it checks the field, so autocorrect or a slow keyboard can't quietly change your text.</span></li>
         </ul>
       </div>
-<pre><span class="c"># add-task.proof</span>
+<pre class="slip"><span class="c"># add-task.proof</span>
 <span class="k">launch</span>
 <span class="k">wait</span> <span class="s">"Yep Todo"</span>
 <span class="k">tap</span> <span class="s">"Add task"</span>
@@ -216,15 +555,12 @@
   <section id="ci">
     <div class="split">
       <div>
-        <h2>Proof on every pull request</h2>
-        <p class="sub">The GitHub Action runs your scenario on GitHub's runners, uploads the video and screenshots, and can post the verdict on the PR. Free for public repos.</p>
-        <ul class="points">
-          <li><div><b>iOS on macOS runners</b><span>A fresh simulator for every run.</span></div></li>
-          <li><div><b>Android on Linux runners</b><span>A real emulator with hardware acceleration.</span></div></li>
-          <li><div><b>Fails the check only on a real failure</b><span>The step fails unless the verdict is PASS, and the report says which kind of failure it was.</span></div></li>
-        </ul>
+        <h2 class="big">Proof on every pull request</h2>
+        <p class="sub">The GitHub Action runs your scenario on GitHub's own runners, iOS on macOS and Android on Linux. It uploads the video and screenshots and can post the verdict on the pull request.</p>
+        <p class="note">The check fails only when the verdict isn't PASS. GitHub's runners are free for public repositories.</p>
       </div>
-<pre><span class="k">- uses:</span> codenameakshay/yepitran@v0
+<pre class="slip"><span class="c"># .github/workflows/proof.yml</span>
+<span class="k">- uses:</span> codenameakshay/yepitran@v0
   <span class="k">with:</span>
     <span class="k">platform:</span> ios
     <span class="k">app:</span> build/ios/iphonesimulator/Runner.app
@@ -233,33 +569,199 @@
     </div>
   </section>
 
-  <section>
-    <h2>Built to never flake on infrastructure</h2>
-    <p class="sub">Simulators that hang, adb servers that die and emulators that crash are recovered, or reported plainly. We break it on purpose before every release.</p>
-    <div class="stats">
-      <div class="stat"><b>10 / 10</b><span>iOS runs passed first try in a row</span></div>
-      <div class="stat"><b>10 / 10</b><span>Android runs passed first try in a row</span></div>
-      <div class="stat"><b>0</b><span>infra failures blamed on the app</span></div>
-    </div>
-  </section>
-
   <footer>
-    <span>yepitran is free and open source under the MIT license.</span>
-    <span><a href="https://github.com/codenameakshay/yepitran">GitHub</a> · made by <a href="https://github.com/codenameakshay">codenameakshay</a></span>
+    <span><b>yep.</b> Free and open source under the MIT license.</span>
+    <span><a href="https://github.com/codenameakshay/yepitran">Source on GitHub</a>, made by <a href="https://github.com/codenameakshay">codenameakshay</a></span>
   </footer>
 </div>
+
 <script>
-  document.querySelectorAll("button.copy").forEach(function (b) {
-    b.addEventListener("click", function () {
-      var text = document.getElementById(b.dataset.copy).textContent;
-      try {
-        navigator.clipboard.writeText(text).then(function () {
-          b.textContent = "Copied";
-          setTimeout(function () { b.textContent = "Copy"; }, 1500);
-        });
-      } catch (e) { /* clipboard unavailable: the command stays selectable */ }
+(function () {
+  var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var EASE = "cubic-bezier(0.23, 1, 0.32, 1)";
+  function $(s, r) { return (r || document).querySelector(s); }
+  function $$(s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); }
+
+  // A stamp lands: pressed in slightly too big, squashes, settles. Rare and earned, so it gets the delight budget.
+  function press(el) {
+    var tilt = getComputedStyle(el).getPropertyValue("--tilt").trim() || "-7deg";
+    el.getAnimations().forEach(function (a) { a.cancel(); });
+    el.classList.add("shown");
+    if (reduce) return el.animate([{ opacity: 0 }, { opacity: 0.92 }], { duration: 200, easing: "ease-out" });
+    return el.animate([
+      { opacity: 0, transform: "rotate(" + tilt + ") scale(1.4)" },
+      { opacity: 0.92, transform: "rotate(" + tilt + ") scale(0.97)", offset: 0.65 },
+      { opacity: 0.92, transform: "rotate(" + tilt + ") scale(1)" }
+    ], { duration: 340, easing: EASE });
+  }
+
+  // ---- the run report: each recording ticks its own column ----
+  var rows = $$("#run .log li[data-ios]");
+  rows.forEach(function (li) {
+    ["ios", "android"].forEach(function (col) {
+      var t = document.createElement("span");
+      t.className = "tick done " + col;
+      t.setAttribute("role", "img");
+      t.setAttribute("aria-label", (col === "ios" ? "iOS" : "Android") + " passed");
+      t.innerHTML = '<svg aria-hidden="true"><use href="#check"/></svg>';
+      li.appendChild(t);
     });
   });
+  var vids = { ios: $('video[data-col="ios"]'), android: $('video[data-col="android"]') };
+  var status = $("#status"), stamp = $("#hero-stamp"), runBtn = $("#run-btn");
+  var raf = 0, guard = 0, running = false;
+  function setTick(el, on) {
+    if (el.classList.contains("done") === on) return;
+    el.classList.toggle("done", on);
+    el.setAttribute("aria-label", (el.classList.contains("ios") ? "iOS" : "Android") + (on ? " passed" : " not run yet"));
+  }
+
+  function tick() {
+    var count = { ios: 0, android: 0 };
+    rows.forEach(function (li) {
+      ["ios", "android"].forEach(function (col) {
+        var v = vids[col], on = v.ended || v.currentTime >= parseFloat(li.dataset[col]);
+        setTick(li.querySelector(".tick." + col), on);
+        if (on) count[col]++;
+      });
+    });
+    status.textContent = "iOS " + count.ios + " of 14, Android " + count.android + " of 14";
+    if (vids.ios.ended && vids.android.ended) finish(); else raf = requestAnimationFrame(tick);
+  }
+  function finish() {
+    cancelAnimationFrame(raf); clearTimeout(guard);
+    if (!running) return;
+    running = false;
+    label.textContent = "Run it again";
+    ["ios", "android"].forEach(function (col) {   // skipping lands both recordings on their last frame
+      var v = vids[col];
+      if (!v.ended) { v.pause(); if (v.duration) v.currentTime = v.duration - 0.05; }
+    });
+    $$(".tick", $("#run")).forEach(function (t) { setTick(t, true); });
+    status.textContent = "";
+    press(stamp);
+  }
+  function start() {
+    cancelAnimationFrame(raf); clearTimeout(guard);
+    running = true;
+    label.textContent = "Skip to the result";
+    stamp.getAnimations().forEach(function (a) { a.cancel(); });
+    stamp.classList.remove("shown");
+    var plays = ["ios", "android"].map(function (col) {
+      var v = vids[col]; v.currentTime = 0; return v.play();
+    });
+    Promise.all(plays).then(function () {
+      raf = requestAnimationFrame(tick);
+      guard = setTimeout(finish, 45000); // a stalled video still ends the run
+    }, function () { running = true; finish(); }); // autoplay blocked: show the finished run
+  }
+  var label = $("span", runBtn);
+  runBtn.addEventListener("click", function () { running ? finish() : start(); });
+
+  if (!reduce && "IntersectionObserver" in window) {
+    var io = new IntersectionObserver(function (entries) {
+      if (entries[0].isIntersecting) { io.disconnect(); start(); }
+    }, { threshold: 0.25 });
+    io.observe($("#run"));
+  }
+
+  // ---- verdict explainer ----
+  var SCENARIOS = {
+    works: { title: "iOS, demo.proof", verdict: ["pass", "PASS", "exit 0"], note: "Done on the first try. Share the video with your reviewer.",
+      attempts: [["", "Attempt 1, freshly booted simulator", "All 14 steps passed."]] },
+    hiccup: { title: "Android, demo.proof", verdict: ["pass", "PASS", "exit 0"], note: "The hiccup is in the report. Your app isn't blamed for it.",
+      attempts: [["infra", "Attempt 1, freshly booted emulator", "The emulator stopped responding at step 9."],
+                 ["", "Attempt 2, after a cold boot", "All 14 steps passed."]] },
+    bug: { title: "iOS, demo.proof", verdict: ["app", "APP FAIL", "exit 1"], note: "Two clean devices agree. The report shows what was on screen.",
+      attempts: [["app", "Attempt 1, freshly booted simulator", "Step 12 failed: “Try yepitran” never appeared."],
+                 ["app", "Attempt 2, on a fresh device", "Step 12 failed again, on the same screen."]] },
+    broken: { title: "Android, demo.proof", verdict: ["infra", "INFRA FAIL", "exit 2"], note: "Nothing here says your app is broken. The report lists what yepitran tried.",
+      attempts: [["infra", "Attempt 1, freshly booted emulator", "The emulator stopped responding at step 3."],
+                 ["infra", "Attempt 2, after a cold boot", "adb lost the device during install."],
+                 ["infra", "Attempt 3, on a wiped device", "The emulator crashed while booting."]] }
+  };
+  var list = $("#attempts"), slipStamp = $("#slip-stamp");
+  function show(key) {
+    var s = SCENARIOS[key];
+    $$("#choices button").forEach(function (b) { b.setAttribute("aria-pressed", String(b.dataset.scenario === key)); });
+    $("#slip-title").textContent = s.title;
+    $("#slip-note").textContent = s.note;
+    list.innerHTML = "";
+    s.attempts.forEach(function (a, i) {
+      var li = document.createElement("li");
+      li.innerHTML = '<i class="dot ' + a[0] + '"></i><div><b></b><span></span></div>';
+      li.querySelector("b").textContent = a[1];
+      li.querySelector("span").textContent = a[2];
+      list.appendChild(li);
+      // attempts arrive in order, then the verdict is stamped
+      li.animate(reduce ? [{ opacity: 0 }, { opacity: 1 }] : [{ opacity: 0, transform: "translateY(6px)" }, { opacity: 1, transform: "none" }],
+        { duration: 220, delay: i * 70, easing: EASE, fill: "backwards" });
+    });
+    slipStamp.className = "stamp shown " + s.verdict[0];
+    slipStamp.innerHTML = "<b></b><small class=\"mono\"></small>";
+    slipStamp.querySelector("b").textContent = s.verdict[1];
+    slipStamp.querySelector("small").textContent = s.verdict[2];
+    slipStamp.setAttribute("aria-label", "Verdict: " + s.verdict[1] + ", " + s.verdict[2].replace("exit", "exit code"));
+    var a = press(slipStamp);
+    if (a && !reduce) { a.effect.updateTiming({ delay: s.attempts.length * 70 + 60, fill: "backwards" }); }
+  }
+  $$("#choices button").forEach(function (b) { b.addEventListener("click", function () { show(b.dataset.scenario); }); });
+
+  // ---- explanations that play once, when they come into view ----
+  function onceVisible(el, fn) {
+    if (reduce || !("IntersectionObserver" in window)) return false;
+    var o = new IntersectionObserver(function (entries) {
+      if (entries[0].isIntersecting) { o.disconnect(); fn(); }
+    }, { rootMargin: "0px 0px -20% 0px" });
+    o.observe(el);
+    return true;
+  }
+  $$("[data-reveal]").forEach(function (el) {
+    if (!onceVisible(el, function () { el.classList.add("in"); })) el.classList.add("in");
+  });
+
+  // ---- the pull request: agent claims, reviewer doubts, yepitran runs it and posts proof ----
+  var thread = $("#thread"), msgs = $$(".msg", thread), runEl = $(".running", thread), resEl = $(".result", thread);
+  var bar = $(".bar i", thread), tStamp = $(".stamp", thread), timers = [];
+  function later(ms, fn) { timers.push(setTimeout(fn, ms)); }
+  function resetThread() {
+    timers.forEach(clearTimeout); timers = [];
+    [bar, tStamp, resEl].concat(msgs).forEach(function (el) { el.getAnimations().forEach(function (a) { a.cancel(); }); });
+    msgs.forEach(function (m) { m.style.opacity = "0"; });
+    runEl.hidden = false; resEl.hidden = true; tStamp.classList.remove("shown");
+  }
+  function playThread() {
+    resetThread();
+    [0, 800, 1700].forEach(function (at, i) {
+      later(at, function () {
+        msgs[i].style.opacity = "";
+        msgs[i].animate([{ opacity: 0, transform: "translateY(8px)" }, { opacity: 1, transform: "none" }], { duration: 320, easing: EASE });
+      });
+    });
+    later(1800, function () {
+      bar.animate([{ transform: "scaleX(0)" }, { transform: "scaleX(1)" }], { duration: 1800, easing: "linear", fill: "forwards" });
+    });
+    later(3700, function () {
+      runEl.hidden = true; resEl.hidden = false;
+      resEl.animate([{ opacity: 0, filter: "blur(4px)" }, { opacity: 1, filter: "none" }], { duration: 260, easing: EASE });
+      press(tStamp);
+    });
+  }
+  $("#thread-replay").addEventListener("click", playThread);
+  // With reduced motion (or no observer) the thread stays in its finished state, and there is nothing to replay.
+  if (onceVisible(thread, playThread)) resetThread(); else $("#thread-replay").hidden = true;
+
+  // ---- copy ----
+  $$("button[data-copy]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      if (!navigator.clipboard) return;
+      navigator.clipboard.writeText($("#" + b.dataset.copy).textContent).then(function () {
+        b.classList.add("copied"); b.setAttribute("aria-label", "Copied");
+        setTimeout(function () { b.classList.remove("copied"); b.setAttribute("aria-label", "Copy install command"); }, 1600);
+      }, function () {});
+    });
+  });
+})();
 </script>
 </body>
 </html>
