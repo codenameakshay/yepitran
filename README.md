@@ -22,8 +22,8 @@ coding agents: they write the scenario, run it, and read `verdict.json`.
 ## Install
 
 ```sh
-pipx install git+https://github.com/codenameakshay/yepitran     # or: uv tool install git+https://github.com/codenameakshay/yepitran
-yepitran doctor                                                # checks your machine; --fix applies the safe fixes
+pipx install yepitran     # or: uv tool install yepitran
+yepitran doctor           # checks your machine; --fix applies the safe fixes
 ```
 
 What it needs:
