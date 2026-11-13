@@ -270,8 +270,6 @@ class RunnerReviewTests(unittest.TestCase):
         return runner
 
     def retype_count(self, field_node, misses):
-        """Type "Try yepitran" where the keyboard stutters on the first entry and the first `misses` reads
-        do not show the field; return how many times it was typed."""
         runner = self.typing_reads("Try yepitran", [])
 
         def read():
@@ -287,7 +285,6 @@ class RunnerReviewTests(unittest.TestCase):
         return self.driver.type_text.call_count
 
     def test_reads_that_miss_the_field_do_not_prove_the_text(self):
-        # CI: tree reads missed the field, so "Trry yepitran" was accepted and saved.
         self.assertEqual(2, self.retype_count(
             lambda text: Node("Task title", "", text, "EditText", 0, 100, 402, 60), misses=2))
 
@@ -295,7 +292,7 @@ class RunnerReviewTests(unittest.TestCase):
         # The demo's sheet is padded by the keyboard, so a late keyboard lifts the field off the tap point.
         self.assertEqual(2, self.retype_count(
             lambda text: Node("Task title", "", text, "EditText", 0, 600, 402, 60), misses=0))
-        self.assertEqual(self.driver.taps[-1], (201.0, 630.0))  # the retype tapped the field where it is now
+        self.assertEqual(self.driver.taps[-1], (201.0, 630.0))
 
     def test_a_field_that_never_shows_up_is_accepted_unchecked(self):
         runner = self.typing_reads("hello", [])
@@ -306,13 +303,32 @@ class RunnerReviewTests(unittest.TestCase):
             runner.type(runner.steps[0])
         self.assertEqual(self.driver.type_text.call_args_list, [mock.call("hello")])
 
+    def test_slow_unknown_reads_are_bounded_before_unchecked_success(self):
+        runner = self.typing_reads("hello", [])
+        clock = [0.0]
+
+        def slow_unknown_read():
+            clock[0] += 6.0
+            return []
+
+        runner.read = mock.Mock(side_effect=slow_unknown_read)
+        with mock.patch("yepitran.runner.time.monotonic", side_effect=lambda: clock[0]), \
+                mock.patch("yepitran.runner.sleep", side_effect=lambda s: clock.__setitem__(0, clock[0] + s)):
+            runner.type(runner.steps[0])
+        self.assertEqual(runner.read.call_count, 3)
+        self.assertEqual(self.driver.type_text.call_args_list, [mock.call("hello")])
+        self.driver.clear_text.assert_not_called()
+
     def test_delayed_read_uses_flutter_ios_label(self):
         field = Node("hello", "", "", "TextField", 0, 100, 402, 60)
         runner = self.typing_reads("hello", [[field], [field]])
-        with mock.patch("yepitran.runner.sleep"):
+        clock = [0.0]
+        with mock.patch("yepitran.runner.time.monotonic", side_effect=lambda: clock[0]), \
+                mock.patch("yepitran.runner.sleep", side_effect=lambda s: clock.__setitem__(0, clock[0] + s)):
             runner.type(runner.steps[0])
         self.assertEqual(self.driver.type_text.call_args_list, [mock.call("hello")])
         self.assertEqual(runner.read.call_count, 2)
+        self.assertEqual(clock[0], 1.6)
 
     def test_delayed_read_accepts_secure_mask(self):
         visible = Node("Task title", "", "hello", "TextField", 0, 100, 402, 60)
@@ -368,6 +384,312 @@ class RunnerReviewTests(unittest.TestCase):
             runner.type(runner.steps[0])
         self.assertEqual(self.driver.type_text.call_args_list, [mock.call("")])
         self.assertEqual(runner.read.call_count, 2)
+
+    def test_mismatch_then_missing_readbacks_timeout_without_clearing_unobserved_field(self):
+        wrong = Node("Task title", "", "wrong", "TextField", 0, 100, 402, 60)
+        runner = self.typing_reads("hello", [[wrong]])
+        clock = [0.0]
+        def read():
+            if runner.read.call_count == 1:
+                return [wrong]
+            return []
+        runner.read = mock.Mock(side_effect=read)
+        with mock.patch("yepitran.runner.time.monotonic", side_effect=lambda: clock[0]), \
+                mock.patch("yepitran.runner.sleep", side_effect=lambda s: clock.__setitem__(0, clock[0] + s)):
+            with self.assertRaises(InfraError):
+                runner.type(runner.steps[0])
+        self.assertEqual(self.driver.type_text.call_args_list, [mock.call("hello")])
+        self.driver.clear_text.assert_not_called()
+
+    def test_correct_readback_followed_by_persistent_missing_readback_is_infra(self):
+        right = Node("Task title", "", "hello", "TextField", 0, 100, 402, 60)
+        runner = self.typing_reads("hello", [])
+        runner.read = mock.Mock(side_effect=lambda: [right] if runner.read.call_count == 1 else [])
+        clock = [0.0]
+        with mock.patch("yepitran.runner.time.monotonic", side_effect=lambda: clock[0]), \
+                mock.patch("yepitran.runner.sleep", side_effect=lambda s: clock.__setitem__(0, clock[0] + s)):
+            with self.assertRaises(InfraError):
+                runner.type(runner.steps[0])
+        self.assertEqual(self.driver.type_text.call_args_list, [mock.call("hello")])
+        self.driver.clear_text.assert_not_called()
+
+    def test_delayed_missing_readback_keeps_polling_until_mismatch_and_retry_are_verified(self):
+        right = Node("Task title", "", "hello", "TextField", 0, 100, 402, 60)
+        wrong = Node("Task title", "", "hllo", "TextField", 0, 100, 402, 60)
+        runner = self.typing_reads("hello", [[right], [], [wrong], [right], [right]])
+        clock = [0.0]
+        with mock.patch("yepitran.runner.time.monotonic", side_effect=lambda: clock[0]), \
+                mock.patch("yepitran.runner.sleep", side_effect=lambda s: clock.__setitem__(0, clock[0] + s)):
+            runner.type(runner.steps[0])
+        self.assertEqual(self.driver.type_text.call_args_list, [mock.call("hello")] * 2)
+        self.assertEqual(runner.read.call_count, 5)
+
+    def test_moved_stable_id_field_is_reacquired_instead_of_old_point_occupant(self):
+        runner = self.runner('type "hello" into id=task-title\n')
+        original = Node("Task title", "task-title", "", "TextField", 0, 100, 402, 60, path=(0, 0))
+        self.driver.nodes = [original]
+        other_at_old_point = Node("Other", "other", "hello", "TextField", 0, 100, 402, 60, path=(0, 1))
+        moved_target = Node("Changed label", "task-title", "wrong", "TextField", 0, 600, 402, 60, path=(0, 0))
+        verified_target = Node("Changed label", "task-title", "hello", "TextField", 0, 600, 402, 60, path=(0, 0))
+        runner.read = mock.Mock(side_effect=lambda: [original] if self.driver.type_text.call_count == 0
+                                else ([other_at_old_point, moved_target]
+                                      if self.driver.type_text.call_count == 1
+                                      else [other_at_old_point, verified_target]))
+        self.driver.type_text = mock.Mock()
+        self.driver.clear_text = mock.Mock()
+        clock = [0.0]
+        with mock.patch("yepitran.runner.time.monotonic", side_effect=lambda: clock[0]), \
+                mock.patch("yepitran.runner.sleep", side_effect=lambda s: clock.__setitem__(0, clock[0] + s)):
+            runner.type(runner.steps[0])
+        self.assertEqual(self.driver.type_text.call_args_list, [mock.call("hello")] * 2)
+        self.assertEqual(self.driver.clear_text.call_args_list, [mock.call(5)])
+        self.assertIn(moved_target.center, self.driver.taps)
+
+    def test_moved_target_with_flutter_label_drift_does_not_accept_matching_other_field(self):
+        runner = self.runner('type "hello" into "Task title"\n')
+        target = Node("Task title", "", "", "TextField", 0, 100, 402, 60, path=(0, 0))
+        self.driver.nodes = [target]
+        unrelated_secure = Node("Task title", "", "•••••", "SecureTextField",
+                                0, 100, 402, 60, path=(0, 1))
+        moved_target = Node("wrong", "", "", "TextField",
+                            0, 600, 402, 60, path=(0, 0))
+        verified_target = Node("hello", "", "", "TextField",
+                               0, 600, 402, 60, path=(0, 0))
+        runner.read = mock.Mock(side_effect=lambda: [target] if self.driver.type_text.call_count == 0
+                                else ([unrelated_secure, moved_target]
+                                      if self.driver.type_text.call_count == 1
+                                      else [unrelated_secure, verified_target]))
+        self.driver.type_text = mock.Mock()
+        self.driver.clear_text = mock.Mock()
+        clock = [0.0]
+        with mock.patch("yepitran.runner.time.monotonic", side_effect=lambda: clock[0]), \
+                mock.patch("yepitran.runner.sleep", side_effect=lambda s: clock.__setitem__(0, clock[0] + s)):
+            runner.type(runner.steps[0])
+        self.assertEqual(self.driver.type_text.call_args_list, [mock.call("hello")] * 2)
+        self.assertEqual(self.driver.clear_text.call_args_list, [mock.call(5)])
+
+    def test_moved_target_does_not_accept_matching_ordinary_field_on_path_swap(self):
+        runner = self.runner('type "hello" into "Task title"\n')
+        target = Node("Task title", "", "", "TextField", 0, 100, 402, 60, path=(0, 0))
+        other = Node("Task title", "", "hello", "TextField", 0, 100, 402, 60, path=(0, 1))
+        wrong = Node("wrong", "", "", "TextField", 0, 600, 402, 60, path=(0, 0))
+        right = Node("hello", "", "", "TextField", 0, 600, 402, 60, path=(0, 0))
+        self.driver.nodes = [target]
+        self.driver.type_text, self.driver.clear_text = mock.Mock(), mock.Mock()
+        runner.read = mock.Mock(side_effect=lambda: [target] if not self.driver.type_text.call_count
+                                else ([other, wrong] if self.driver.type_text.call_count == 1 else [other, right]))
+        clock = [0.0]
+        with mock.patch("yepitran.runner.time.monotonic", side_effect=lambda: clock[0]):
+            with mock.patch("yepitran.runner.sleep",
+                            side_effect=lambda s: clock.__setitem__(0, clock[0] + s)):
+                runner.type(runner.steps[0])
+        self.assertEqual(self.driver.type_text.call_args_list, [mock.call("hello")] * 2)
+        self.assertEqual(self.driver.clear_text.call_args_list, [mock.call(5)])
+
+    def test_offscreen_stable_id_field_is_not_tapped_for_retry(self):
+        runner = self.runner('type "hello" into id=task-title\n')
+        target = Node("Task title", "task-title", "", "TextField", 0, 100, 402, 60, path=(0, 0))
+        offscreen = Node("Task title", "task-title", "wrong", "TextField", 0, 0, 0, 0, path=(0, 0))
+        self.driver.nodes = [target]
+        self.driver.type_text, self.driver.clear_text = mock.Mock(), mock.Mock()
+        runner.read = mock.Mock(side_effect=lambda: [target] if not self.driver.type_text.call_count else [offscreen])
+        clock = [0.0]
+        with mock.patch("yepitran.runner.time.monotonic", side_effect=lambda: clock[0]):
+            with mock.patch("yepitran.runner.sleep",
+                            side_effect=lambda s: clock.__setitem__(0, clock[0] + s)):
+                with self.assertRaises(InfraError):
+                    runner.type(runner.steps[0])
+        self.assertEqual(self.driver.type_text.call_args_list, [mock.call("hello")])
+        self.assertEqual(self.driver.taps, [target.center])
+        self.driver.clear_text.assert_not_called()
+
+    def test_selector_rerun_distinguishes_exact_text_from_has_on_moved_label(self):
+        for selector, expected_types in (("\"Task title\"", 1), ("has=\"Task title\"", 2)):
+            with self.subTest(selector=selector):
+                runner = self.runner(f'type "hello" into {selector}\n')
+                initial = Node("Task title", "", "", "TextField", 0, 100, 402, 60)
+                wrong_moved = Node("Task title longer", "", "wrong", "TextField",
+                                   0, 600, 402, 60)
+                verified_moved = Node("Task title longer", "", "hello", "TextField",
+                                      0, 600, 402, 60)
+                self.driver.nodes = [initial]
+                self.driver.type_text = mock.Mock()
+                self.driver.clear_text = mock.Mock()
+
+                def read():
+                    if self.driver.type_text.call_count == 0:
+                        return [initial]
+                    if self.driver.type_text.call_count == 1:
+                        return [wrong_moved]
+                    return [verified_moved]
+
+                runner.read = mock.Mock(side_effect=read)
+                clock = [0.0]
+                with mock.patch("yepitran.runner.time.monotonic", side_effect=lambda: clock[0]), \
+                        mock.patch("yepitran.runner.sleep",
+                                   side_effect=lambda s: clock.__setitem__(0, clock[0] + s)):
+                    runner.type(runner.steps[0])
+                self.assertEqual(self.driver.type_text.call_args_list,
+                                 [mock.call("hello")] * expected_types)
+                if expected_types == 2:
+                    self.assertEqual(self.driver.clear_text.call_args_list, [mock.call(5)])
+
+    def test_mismatch_then_retry_that_stays_invisible_is_infra_without_stale_clear(self):
+        runner = self.typing_reads("hello", [])
+        wrong = Node("Task title", "", "wrong", "TextField", 0, 100, 402, 60)
+        clock = [0.0]
+
+        def read():
+            clock[0] += 6.0
+            return [wrong] if self.driver.type_text.call_count == 1 else []
+
+        runner.read = mock.Mock(side_effect=read)
+        with mock.patch("yepitran.runner.time.monotonic", side_effect=lambda: clock[0]), \
+                mock.patch("yepitran.runner.sleep", side_effect=lambda s: clock.__setitem__(0, clock[0] + s)):
+            with self.assertRaises(InfraError):
+                runner.type(runner.steps[0])
+        self.assertEqual(self.driver.type_text.call_args_list, [mock.call("hello")] * 2)
+        self.assertEqual(self.driver.clear_text.call_args_list, [mock.call(5)])
+
+    def test_explicit_nth_keeps_full_tree_order_when_recovering_moved_field(self):
+        runner = self.runner('type "hello" into "Task title" #2\n')
+        button = Node("Task title", "", "", "Button", 0, 50, 402, 40)
+        field = Node("Task title", "", "", "TextField", 0, 100, 402, 60)
+        moved_field = Node("Task title", "", "wrong", "TextField", 0, 600, 402, 60)
+        verified_field = Node("Task title", "", "hello", "TextField", 0, 600, 402, 60)
+        self.driver.nodes = [button, field]
+        self.driver.tree = mock.Mock(side_effect=lambda: [button, field] if self.driver.type_text.call_count == 0
+                                     else ([button, moved_field]
+                                           if self.driver.type_text.call_count == 1
+                                           else [button, verified_field]))
+        self.driver.type_text = mock.Mock()
+        self.driver.clear_text = mock.Mock()
+        clock = [0.0]
+        with mock.patch("yepitran.runner.time.monotonic", side_effect=lambda: clock[0]), \
+                mock.patch("yepitran.runner.sleep", side_effect=lambda s: clock.__setitem__(0, clock[0] + s)):
+            runner.type(runner.steps[0])
+        self.assertEqual(self.driver.type_text.call_args_list, [mock.call("hello")] * 2)
+        self.assertEqual(self.driver.clear_text.call_args_list, [mock.call(5)])
+
+    def test_android_readback_does_not_accept_foreign_package_field(self):
+        runner = self.runner('type "hello" into id=task-title\n')
+        runner.platform = "android"
+        self.driver.app = {"id": "com.example", "name": "Example"}
+        target = Node("Task title", "task-title", "", "EditText", 0, 100, 402, 60,
+                      pkg="com.example", path=(0, 0))
+        self.driver.nodes = [target]
+        foreign = Node("Task title", "task-title", "hello", "EditText", 0, 100, 402, 60,
+                       pkg="com.android.settings", path=(0, 1))
+        target_wrong = Node("Task title", "task-title", "wrong", "EditText", 0, 100, 402, 60,
+                            pkg="com.example", path=(0, 0))
+        target_right = Node("Task title", "task-title", "hello", "EditText", 0, 100, 402, 60,
+                            pkg="com.example", path=(0, 0))
+        runner.read = mock.Mock(side_effect=lambda: [target] if self.driver.type_text.call_count == 0
+                                else ([foreign, target_wrong] if self.driver.type_text.call_count == 1
+                                      else [foreign, target_right]))
+        self.driver.type_text = mock.Mock()
+        self.driver.clear_text = mock.Mock()
+        clock = [0.0]
+        with mock.patch("yepitran.runner.time.monotonic", side_effect=lambda: clock[0]), \
+                mock.patch("yepitran.runner.sleep", side_effect=lambda s: clock.__setitem__(0, clock[0] + s)):
+            runner.type(runner.steps[0])
+        self.assertEqual(self.driver.type_text.call_args_list, [mock.call("hello")] * 2)
+
+    def test_duplicate_id_survivor_is_not_mistaken_for_original_field(self):
+        runner = self.runner('type "hello" into "Task title"\n')
+        target = Node("Task title", "entry", "", "TextField", 0, 100, 402, 60, path=(0, 0))
+        other = Node("Other", "entry", "hello", "TextField", 0, 300, 402, 60, path=(0, 1))
+        moved_wrong = Node("Task title", "entry", "wrong", "TextField", 0, 600, 402, 60, path=(0, 0))
+        moved_right = Node("Task title", "entry", "hello", "TextField", 0, 600, 402, 60, path=(0, 0))
+        self.driver.nodes = [target, other]
+        self.driver.type_text = mock.Mock()
+        self.driver.clear_text = mock.Mock()
+        post_type_reads = [0]
+
+        def read():
+            if self.driver.type_text.call_count == 0:
+                return [target, other]
+            if self.driver.type_text.call_count == 1:
+                post_type_reads[0] += 1
+                return [other] if post_type_reads[0] < 3 else [other, moved_wrong]
+            return [other, moved_right]
+
+        runner.read = mock.Mock(side_effect=read)
+        clock = [0.0]
+        with mock.patch("yepitran.runner.time.monotonic", side_effect=lambda: clock[0]), \
+                mock.patch("yepitran.runner.sleep", side_effect=lambda s: clock.__setitem__(0, clock[0] + s)):
+            runner.type(runner.steps[0])
+        self.assertEqual(self.driver.type_text.call_args_list, [mock.call("hello")] * 2)
+        self.assertEqual(self.driver.clear_text.call_args_list, [mock.call(5)])
+        self.assertIn(moved_wrong.center, self.driver.taps)
+
+    def test_reused_path_does_not_verify_the_other_field(self):
+        runner = self.runner('type "hello" into "Task title"\n')
+        target = Node("Task title", "", "", "TextField", 0, 100, 402, 60, path=(0, 0))
+        other = Node("Other", "", "", "TextField", 0, 300, 402, 60, path=(0, 1))
+        moved_wrong = Node("Task title", "", "wrong", "TextField", 0, 600, 402, 60, path=(0, 1))
+        other_at_old_path = Node("Other", "", "hello", "TextField", 0, 400, 402, 60, path=(0, 0))
+        moved_right = Node("Task title", "", "hello", "TextField", 0, 600, 402, 60, path=(0, 1))
+        self.driver.nodes = [target, other]
+        self.driver.type_text = mock.Mock()
+        self.driver.clear_text = mock.Mock()
+
+        def read():
+            if self.driver.type_text.call_count == 0:
+                return [target, other]
+            if self.driver.type_text.call_count == 1:
+                return [moved_wrong, other_at_old_path]
+            return [moved_right, other_at_old_path]
+
+        runner.read = mock.Mock(side_effect=read)
+        clock = [0.0]
+        with mock.patch("yepitran.runner.time.monotonic", side_effect=lambda: clock[0]), \
+                mock.patch("yepitran.runner.sleep", side_effect=lambda s: clock.__setitem__(0, clock[0] + s)):
+            runner.type(runner.steps[0])
+        self.assertEqual(self.driver.type_text.call_args_list, [mock.call("hello")] * 2)
+        self.assertEqual(self.driver.clear_text.call_args_list, [mock.call(5)])
+        self.assertIn(moved_wrong.center, self.driver.taps)
+
+    def test_retry_tap_avoids_overlay_at_moved_field_center(self):
+        runner = self.typing_reads("hello", [])
+        original = Node("Task title", "", "", "TextField", 0, 100, 402, 60, path=(0, 0))
+        intended = Node("Task title", "", "wrong", "TextField", 0, 600, 402, 60, path=(0, 0))
+        overlay = Node("Overlay", "", "", "Button", 150, 620, 100, 40, path=(0, 1))
+        right = Node("Task title", "", "hello", "TextField", 0, 600, 402, 60, path=(0, 0))
+        self.driver.nodes = [original]
+        runner.read = mock.Mock(side_effect=lambda: [intended, overlay] if self.driver.type_text.call_count == 1
+                                else [right, overlay])
+        self.driver.type_text = mock.Mock()
+        self.driver.clear_text = mock.Mock()
+        clock = [0.0]
+        with mock.patch("yepitran.runner.time.monotonic", side_effect=lambda: clock[0]), \
+                mock.patch("yepitran.runner.sleep", side_effect=lambda s: clock.__setitem__(0, clock[0] + s)):
+            runner.type(runner.steps[0])
+        retry_point = self.driver.taps[-1]
+        self.assertTrue(intended.x <= retry_point[0] <= intended.x + intended.w)
+        self.assertTrue(intended.y <= retry_point[1] <= intended.y + intended.h)
+        self.assertFalse(overlay.x <= retry_point[0] <= overlay.x + overlay.w and
+                         overlay.y <= retry_point[1] <= overlay.y + overlay.h)
+
+    def test_type_without_target_does_not_read_tree(self):
+        runner = self.runner('type "hello"\n')
+        runner.read = mock.Mock(side_effect=AssertionError("untargeted type needs no readback"))
+        self.driver.type_text = mock.Mock()
+        runner.type(runner.steps[0])
+        self.assertEqual(self.driver.type_text.call_args_list, [mock.call("hello")])
+        runner.read.assert_not_called()
+
+    def test_final_mismatch_raises_without_clearing_last_visible_input(self):
+        wrong = Node("Task title", "", "wrong", "TextField", 0, 100, 402, 60)
+        runner = self.typing_reads("hello", [])
+        runner.read = mock.Mock(return_value=[wrong])
+        clock = [0.0]
+        with mock.patch("yepitran.runner.time.monotonic", side_effect=lambda: clock[0]), \
+                mock.patch("yepitran.runner.sleep", side_effect=lambda s: clock.__setitem__(0, clock[0] + s)):
+            with self.assertRaisesRegex(InfraError, "3 times"):
+                runner.type(runner.steps[0])
+        self.assertEqual(self.driver.type_text.call_args_list, [mock.call("hello")] * 3)
+        self.assertEqual(self.driver.clear_text.call_args_list, [mock.call(5)] * 2)
 
 
 if __name__ == "__main__":

@@ -465,49 +465,119 @@ class LegRunner:
 
     def type(self, s: Step) -> None:
         point = None
+        identity = None
+        original_field = None
+        unique_id = False
+        selector_identifies_original = False
+        peer_labels, peer_ids = set(), set()
         if s.target:
             n, nodes = self.find(s.target, s.timeout, tappable=True, with_tree=True)
             point = ui.tap_point(n, nodes, self.d.screen)
             self.d.tap(*point)
             sleep(0.6)
+            app_nodes = self.app_tree_nodes(nodes)
+            original_field = self.field_at(app_nodes, point)
+            selected = ui.find(app_nodes, s.target, self.d.screen, tappable=True)
+            unique_selector = s.target.explicit_nth or ui.count(app_nodes, s.target, self.d.screen) == 1
+            if original_field is None:
+                if unique_selector and selected and selected.kind in TEXT_FIELDS:
+                    original_field = selected
+            if original_field:
+                selector_identifies_original = unique_selector and selected == original_field
+                peers = [n for n in app_nodes if n.kind == original_field.kind and n.pkg == original_field.pkg
+                         and n is not original_field]
+                peer_labels = {n.label for n in peers if n.label and n.label != original_field.label}
+                peer_ids = {n.id for n in peers if n.id and n.id != original_field.id}
+                unique_id = sum(n.id == original_field.id for n in app_nodes if n.kind in TEXT_FIELDS) == 1
+                identity = (("id", original_field.id, original_field.path, original_field.kind, original_field.pkg)
+                            if original_field.id else
+                            ("path", original_field.path, original_field.kind, original_field.pkg)
+                            if original_field.path else None)
         shown = ""
+        observed = False
 
         def readback() -> bool | None:
-            """True if the text landed, False if not, None if this read did not show the field."""
-            nonlocal shown, point
+            """True means verified, False means mismatched, None means the original field was not found."""
+            nonlocal shown, observed, point
             nodes = self.read()
-            field_ = self.field_at(nodes, point)
+            app_nodes = self.app_tree_nodes(nodes)
+            if identity and identity[0] == "id":
+                id_hits = [n for n in app_nodes if n.kind in TEXT_FIELDS and n.id == identity[1]]
+                if unique_id and len(id_hits) == 1:
+                    field_ = id_hits[0]
+                else:
+                    path_hits = [n for n in id_hits if identity[2] and n.path == identity[2]
+                                 and n.kind == identity[3] and n.pkg == identity[4]]
+                    field_ = path_hits[0] if len(path_hits) == 1 else None
+            elif identity:
+                field_ = next((n for n in app_nodes if n.kind in TEXT_FIELDS and n.path == identity[1]
+                               and n.kind == identity[2] and n.pkg == identity[3]), None)
+            else:
+                field_ = None
+                if s.target:
+                    selected = ui.find(app_nodes, s.target, self.d.screen, tappable=True)
+                    if (s.target.explicit_nth or ui.count(app_nodes, s.target, self.d.screen) == 1) \
+                            and selected and selected.kind in TEXT_FIELDS:
+                        field_ = selected
+                if field_ is None:
+                    field_ = self.field_at(app_nodes, point) if point else None
+            if identity and (identity[0] == "path" or not unique_id) and selector_identifies_original:
+                selected = ui.find(app_nodes, s.target, self.d.screen, tappable=True)
+                if (s.target.explicit_nth or ui.count(app_nodes, s.target, self.d.screen) == 1) \
+                        and selected and selected.kind == original_field.kind and selected.pkg == original_field.pkg \
+                        and (not original_field.id or selected.id == original_field.id):
+                    fields = [n for n in app_nodes if n.kind == original_field.kind and n.pkg == original_field.pkg]
+                    known_peer = field_ is not None and (
+                        (field_.id in peer_ids and sum(n.id == field_.id for n in fields) == 1)
+                        or (field_.label in peer_labels and sum(n.label == field_.label for n in fields) == 1))
+                    if field_ is None or known_peer:
+                        field_ = selected
             if field_ is None:
-                # The field can move after the tap (a sheet padded by a late keyboard); find it by name.
-                field_ = ui.find([n for n in nodes if n.kind in TEXT_FIELDS], s.target, self.d.screen)
-                if field_:
-                    point = field_.center  # a retype taps it where it is now
-            if field_ is None:
-                return None  # a keyboard or dialog can hide it from one read; read again
-            # Flutter on iOS exposes text as the label, Android as the value.
+                return None
+            observed = True
+            point = ui.tap_point(field_, nodes, self.d.screen) if field_.on_screen(self.d.screen) else None
             shown = field_.value or field_.label
             if field_.kind == "SecureTextField" or (shown and set(shown) <= set("•●*")):
-                return True  # secure; an empty ordinary field is still readable
-            return ui.text_landed(s.text, shown)
+                landed = True
+            else:
+                landed = ui.text_landed(s.text, shown)
+            return landed
+
+        def poll(stop_on_false: bool = False) -> bool | None:
+            deadline = time.monotonic() + self.budget(5)
+            reads = 0
+            while True:
+                result = readback()
+                reads += 1
+                if result is True or (stop_on_false and result is False):
+                    return result
+                if time.monotonic() > deadline and reads >= 3:
+                    return result
+                sleep(0.5)
 
         for attempt in range(3):
             self.d.type_text(s.text)
             if point is None:
                 return
-            deadline = time.monotonic() + self.budget(5)
-            reads = 0
-            while True:  # a paste can wait behind an "Allow Paste" prompt that read() answers
-                landed, reads = readback(), reads + 1
-                if landed or (time.monotonic() > deadline and reads >= 3):
-                    break
-                sleep(0.5)
-            if landed is None:
+            landed = poll()
+            if landed is None and not observed:
                 self.log(f'  note: typed "{s.text}" but the field was not in the tree to check it')
                 return
+            if landed is None:
+                raise InfraError(f'typed "{s.text}" but the original field disappeared from the accessibility tree; '
+                                 "cannot verify or safely retry the input")
             if landed:
                 sleep(1.0)  # a slow keyboard can still rewrite the field after it looked right
-                if readback() is not False:
+                stable = poll(stop_on_false=True)
+                if stable is True:
                     return
+                if stable is None:
+                    raise InfraError(f'typed "{s.text}" but the original field disappeared after readback; '
+                                     "cannot verify or safely retry the input")
+            if attempt == 2:
+                break  # do not mutate the field after the final failed type
+            if point is None:
+                raise InfraError(f'typed "{s.text}" but the original field is not on screen; cannot safely retry the input')
             self.log(f'typed "{s.text}" but the field shows "{shown}"; clearing and retyping')
             self.d.tap(*point)
             self.d.clear_text(len(shown))
