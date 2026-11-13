@@ -472,13 +472,22 @@ class LegRunner:
             sleep(0.6)
         shown = ""
 
-        def readback() -> bool:
-            nonlocal shown
-            field_ = self.field_at(self.read(), point)
+        def readback() -> bool | None:
+            """True if the text landed, False if not, None if this read did not show the field."""
+            nonlocal shown, point
+            nodes = self.read()
+            field_ = self.field_at(nodes, point)
+            if field_ is None:
+                # The field can move after the tap (a sheet padded by a late keyboard); find it by name.
+                field_ = ui.find([n for n in nodes if n.kind in TEXT_FIELDS], s.target, self.d.screen)
+                if field_:
+                    point = field_.center  # a retype taps it where it is now
+            if field_ is None:
+                return None  # a keyboard or dialog can hide it from one read; read again
             # Flutter on iOS exposes text as the label, Android as the value.
-            shown = (field_.value or field_.label) if field_ else ""
-            if field_ is None or field_.kind == "SecureTextField" or (shown and set(shown) <= set("•●*")):
-                return True  # secure or unexposed; an empty ordinary field is still readable
+            shown = field_.value or field_.label
+            if field_.kind == "SecureTextField" or (shown and set(shown) <= set("•●*")):
+                return True  # secure; an empty ordinary field is still readable
             return ui.text_landed(s.text, shown)
 
         for attempt in range(3):
@@ -486,14 +495,18 @@ class LegRunner:
             if point is None:
                 return
             deadline = time.monotonic() + self.budget(5)
+            reads = 0
             while True:  # a paste can wait behind an "Allow Paste" prompt that read() answers
-                landed = readback()
-                if landed or time.monotonic() > deadline:
+                landed, reads = readback(), reads + 1
+                if landed or (time.monotonic() > deadline and reads >= 3):
                     break
                 sleep(0.5)
+            if landed is None:
+                self.log(f'  note: typed "{s.text}" but the field was not in the tree to check it')
+                return
             if landed:
                 sleep(1.0)  # a slow keyboard can still rewrite the field after it looked right
-                if readback():
+                if readback() is not False:
                     return
             self.log(f'typed "{s.text}" but the field shows "{shown}"; clearing and retyping')
             self.d.tap(*point)

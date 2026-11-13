@@ -269,6 +269,43 @@ class RunnerReviewTests(unittest.TestCase):
         self.driver.clear_text = mock.Mock()
         return runner
 
+    def retype_count(self, field_node, misses):
+        """Type "Try yepitran" where the keyboard stutters on the first entry and the first `misses` reads
+        do not show the field; return how many times it was typed."""
+        runner = self.typing_reads("Try yepitran", [])
+
+        def read():
+            if runner.read.call_count <= misses:
+                return []
+            text = "Try yepitran" if self.driver.type_text.call_count > 1 else "Trry yepitran"
+            return [field_node(text)]
+        runner.read = mock.Mock(side_effect=read)
+        clock = [0.0]
+        with mock.patch("yepitran.runner.time.monotonic", side_effect=lambda: clock[0]), \
+                mock.patch("yepitran.runner.sleep", side_effect=lambda s: clock.__setitem__(0, clock[0] + s)):
+            runner.type(runner.steps[0])
+        return self.driver.type_text.call_count
+
+    def test_reads_that_miss_the_field_do_not_prove_the_text(self):
+        # CI: tree reads missed the field, so "Trry yepitran" was accepted and saved.
+        self.assertEqual(2, self.retype_count(
+            lambda text: Node("Task title", "", text, "EditText", 0, 100, 402, 60), misses=2))
+
+    def test_a_field_that_moved_after_the_tap_is_found_by_name(self):
+        # The demo's sheet is padded by the keyboard, so a late keyboard lifts the field off the tap point.
+        self.assertEqual(2, self.retype_count(
+            lambda text: Node("Task title", "", text, "EditText", 0, 600, 402, 60), misses=0))
+        self.assertEqual(self.driver.taps[-1], (201.0, 630.0))  # the retype tapped the field where it is now
+
+    def test_a_field_that_never_shows_up_is_accepted_unchecked(self):
+        runner = self.typing_reads("hello", [])
+        runner.read = mock.Mock(return_value=[])
+        clock = [0.0]
+        with mock.patch("yepitran.runner.time.monotonic", side_effect=lambda: clock[0]), \
+                mock.patch("yepitran.runner.sleep", side_effect=lambda s: clock.__setitem__(0, clock[0] + s)):
+            runner.type(runner.steps[0])
+        self.assertEqual(self.driver.type_text.call_args_list, [mock.call("hello")])
+
     def test_delayed_read_uses_flutter_ios_label(self):
         field = Node("hello", "", "", "TextField", 0, 100, 402, 60)
         runner = self.typing_reads("hello", [[field], [field]])
