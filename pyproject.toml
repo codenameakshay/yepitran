@@ -24,7 +24,7 @@ classifiers = [
 dependencies = []
 
 [project.urls]
-Homepage = "https://codenameakshay.github.io/yepitran/"
+Homepage = "https://yepitran.akshaymaurya.com/"
 Repository = "https://github.com/codenameakshay/yepitran"
 Issues = "https://github.com/codenameakshay/yepitran/issues"
 
